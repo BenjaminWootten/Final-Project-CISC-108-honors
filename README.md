@@ -17,9 +17,9 @@ To run this program you need to install the library NumPy
 ![Sketch demonstrating the level with each type of block present](https://github.com/BenjaminWootten/Final-Project-CISC-108-honors/blob/main/Images/CISC108%20final%20project%20sketch.png)
 
 Phase 1 task list:
-- [ ] The 3d level base can be panned around by the player
+- [x] The 3d level base can be panned around by the player
 - [x] Function to create a box on the level base and declare its type
-- [ ] 1 basic level for testing mechanics exists
+- [x] 1 basic level for testing mechanics exists
 - [ ] Red boxes can be scaled by the player clicking on them
 - [ ] Scaling up one red box will scale all others back to their original size,
         meaning only one can be scaled up at a time
