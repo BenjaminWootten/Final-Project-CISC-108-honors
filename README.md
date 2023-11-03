@@ -12,6 +12,10 @@ but these are my fundamentals.
 The scalable red blocks are the player's main means of interacting with the level,
 and a very direct usage of the theme 'SCALE'.
 
+To run this program you need to install the library NumPy
+
+![Sketch demonstrating the level with each type of block present](https://github.com/BenjaminWootten/Final-Project-CISC-108-honors/blob/main/Images/CISC108%20final%20project%20sketch.png)
+
 Phase 1 task list:
 - [ ] The 3d level base can be panned around by the player
 - [ ] Function to create a box on the level base and declare its type
@@ -32,7 +36,7 @@ Phase 3 task list:
 - [ ] Actual creation of 10 or so levels
 - [ ] Main menu
 - [ ] Level select screen
-- [ ] Track completed and incompleted levels on level select screen
+- [ ] Track completed and uncompleted levels on level select screen
 - [ ] Return to level select upon completing a level
 - [ ] Victory screen upon all levels being completed
 
