@@ -18,7 +18,7 @@ To run this program you need to install the library NumPy
 
 Phase 1 task list:
 - [ ] The 3d level base can be panned around by the player
-- [ ] Function to create a box on the level base and declare its type
+- [x] Function to create a box on the level base and declare its type
 - [ ] 1 basic level for testing mechanics exists
 - [ ] Red boxes can be scaled by the player clicking on them
 - [ ] Scaling up one red box will scale all others back to their original size,
