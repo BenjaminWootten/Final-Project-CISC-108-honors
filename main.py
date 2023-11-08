@@ -7,6 +7,7 @@ from dataclasses import dataclass
 class Box:
     color: str
     scale: float
+    size: list[float] # [x,y,z]
     center: list[float] # [x,y,z]
     points: list[list[float]] # [[x,y,z]]
     projected_points: list[list[float]] # [[x,y]]
@@ -29,6 +30,7 @@ class World:
 
 
 CENTER = [get_width()/2, get_height()/2]
+SCALE = 50.0
 
 PROJECTION_MATRIX = np.matrix([
     [1, 0, 0],
@@ -58,6 +60,30 @@ def generate_points(size: list[float], position: list[float]) -> list[[]]:
 
     return points
 
+def scale_points(box: Box, scale: float) -> list[[]]:
+    box.size[0] += scale
+    box.size[1] += scale
+    box.size[2] += scale
+    points = []
+    xpos = box.center[0]
+    ypos = box.center[1]
+    zpos = box.center[2]
+    xsize = box.size[0]
+    ysize = box.size[1]
+    zsize = box.size[2]
+    # top 4 points
+    points.append(np.matrix([xpos - xsize / 2, ypos - ysize / 2, zpos + zsize / 2]))
+    points.append(np.matrix([xpos + xsize / 2, ypos - ysize / 2, zpos + zsize / 2]))
+    points.append(np.matrix([xpos + xsize / 2, ypos + ysize / 2, zpos + zsize / 2]))
+    points.append(np.matrix([xpos - xsize / 2, ypos + ysize / 2, zpos + zsize / 2]))
+    # bottom 4 points
+    points.append(np.matrix([xpos - xsize / 2, ypos - ysize / 2, zpos - zsize / 2]))
+    points.append(np.matrix([xpos + xsize / 2, ypos - ysize / 2, zpos - zsize / 2]))
+    points.append(np.matrix([xpos + xsize / 2, ypos + ysize / 2, zpos - zsize / 2]))
+    points.append(np.matrix([xpos - xsize / 2, ypos + ysize / 2, zpos - zsize / 2]))
+
+    return points
+
 def create_line(i: int, j: int, points) -> DesignerObject:
     # Returns a line connecting points at indexes i and j in list points
     return line("black", points[i][0], points[i][1], points[j][0], points[j][1])
@@ -70,7 +96,7 @@ def create_face(color: str, i: int, j: int, k: int, l: int, points) -> DesignerO
 def create_box(size: list[float], position: list[float], type: str) -> Box:
     # Returns a box of given type, size, and center position
 
-    starting_scale = 50.0
+    starting_scale = 1.0
     projected_points = []
     vertices = []
     lines = []
@@ -87,8 +113,8 @@ def create_box(size: list[float], position: list[float], type: str) -> Box:
         projected2d = PROJECTION_MATRIX @ point.transpose()
 
         # Set x and y to projected position
-        x = projected2d[0, 0] * starting_scale + CENTER[0]
-        y = projected2d[1, 0] * starting_scale + CENTER[1]
+        x = projected2d[0, 0] * SCALE + CENTER[0]
+        y = projected2d[1, 0] * SCALE + CENTER[1]
 
         # Add 8 circles representing the vertices
         vertices.append(circle("black", 5, x, y))
@@ -107,7 +133,7 @@ def create_box(size: list[float], position: list[float], type: str) -> Box:
     for p in range(4):
         faces.append(create_face(type, p, (p + 1) % 4, (p + 1) % 4 + 4, p + 4, projected_points))
 
-    return Box(type, starting_scale, position, points, projected_points, vertices, lines, faces)
+    return Box(type, starting_scale, size, position, points, projected_points, vertices, lines, faces)
 
 def destroy_box(box: Box):
     for vertex in box.vertices:
@@ -191,6 +217,9 @@ def update_boxes(world: World):
 
         destroy_box(box)
 
+        box.points.clear()
+        box.points = generate_points(box.size, box.center)
+
         for index, point in enumerate(box.points):
             # @ is the matrix multiplication operator
             # Use transpose to change point from 1x3 to 3x1 matrix to make multiplication with 2d matrix compatible
@@ -203,8 +232,8 @@ def update_boxes(world: World):
             projected2d = PROJECTION_MATRIX @ rotated2d
 
             # Set projected x and y values for each coordinate
-            x = projected2d[0, 0] * box.scale + CENTER[0]
-            y = projected2d[1, 0] * box.scale + CENTER[1]
+            x = projected2d[0, 0] * SCALE + CENTER[0]
+            y = projected2d[1, 0] * SCALE + CENTER[1]
 
             # Add x and y values to list of projected points
             box.projected_points[index] = [x, y]
@@ -235,17 +264,15 @@ def update_boxes(world: World):
     if world.is_panning:
         pan_world(world)
 
+    scale_speed = 0.05
     # Red box scaling
     if world.scaled_up_red_box:
-        if world.scaled_up_red_box.scale < 75.0:
-            world.scaled_up_red_box.scale += 1
-            for point in world.scaled_up_red_box.points:
-                point[0,1] -= 0.005
+        if world.scaled_up_red_box.size[0] < 2:
+            world.scaled_up_red_box.points = scale_points(world.scaled_up_red_box, scale_speed)
+
 
             if world.previously_scaled_up_red_box:
-                world.previously_scaled_up_red_box.scale -= 1
-                for point in world.previously_scaled_up_red_box.points:
-                    point[0, 1] += 0.005
+                world.previously_scaled_up_red_box.points = scale_points(world.previously_scaled_up_red_box, -scale_speed)
 
 
 def red_box_interaction(world: World):
@@ -269,7 +296,7 @@ def red_box_interaction(world: World):
         # Checks if the closest clicked box is red
         if closest_clicked.color == "red":
             world.is_clicking_interactable = True
-            if closest_clicked.scale == 50.0:
+            if closest_clicked.scale == 1.0:
                 world.previously_scaled_up_red_box = world.scaled_up_red_box
                 world.scaled_up_red_box = closest_clicked
             else:
@@ -302,7 +329,7 @@ def pan_end(world: World):
 
 def create_World() -> World:
     white_boxes = [create_box([1, 1, 1], [0, 0, 2], "white")]
-    red_boxes = [create_box([1,1,1], [0,0,0], "red")]
+    red_boxes = [create_box([1,1,1], [0,0,0], "red"), create_box([1,1,1], [-2,0,1], "red")]
     blue_boxes = [create_box([1,1,1], [-1, 0, -1], "blue")]
     green_boxes = [create_box([1,1,1], [2, 0, -1], "green")]
     base = create_box([8, 1, 8], [0, 1, 0], "white")
