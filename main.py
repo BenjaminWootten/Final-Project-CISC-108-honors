@@ -21,8 +21,11 @@ class World:
     boxes: list[list[Box]] # [[White], [Red], [Blue], [Green]]
     box_render_order: list[Box]
     angle: list[float] # [x, y, z]
-    click_pos: list[int]
-    is_clicking: bool
+    pan_pos: list[int]
+    is_panning: bool
+    is_clicking_interactable: bool
+    scaled_up_red_box: Box
+    previously_scaled_up_red_box: Box
 
 
 CENTER = [get_width()/2, get_height()/2]
@@ -134,13 +137,14 @@ def update_boxes(world: World):
         [0, 0, 1]
     ])
 
-
+    # Clear render order so it can be recalculated
+    world.box_render_order.clear()
 
     for type in world.boxes:
         # Run through all 4 box types
 
         for box in type:
-            # This loop adds all boxes to a new list ordered from furthest to closest to the camera,
+            # This loop adds all boxes to a new list insertion sorted from furthest to closest to the camera,
             # therefore preventing layering issues upon rendering
 
             i = 0
@@ -227,45 +231,92 @@ def update_boxes(world: World):
             box.vertices[index] = circle("black", 5, projected_point[0], projected_point[1])
 
 
-    world.box_render_order.clear()
+    # Rotating boxes with mouse pan
+    if world.is_panning:
+        pan_world(world)
 
-    # Code for rotating box with mouse pan
-    if world.is_clicking:
-        world.angle[1] -= (get_mouse_x() - world.click_pos[0]) / 500
+    # Red box scaling
+    if world.scaled_up_red_box:
+        if world.scaled_up_red_box.scale < 75.0:
+            world.scaled_up_red_box.scale += 1
+            for point in world.scaled_up_red_box.points:
+                point[0,1] -= 0.005
 
-        if world.angle[1] % (m.pi*2) < (m.pi/2) or world.angle[1] % (m.pi*2) >= (m.pi*3/2):
-            world.angle[0] += (get_mouse_y() - world.click_pos[1]) / 500
-        elif world.angle[1] % (m.pi*2) >= (m.pi/2) and world.angle[1] % (m.pi*2) < (m.pi*3/2):
-            world.angle[0] -= (get_mouse_y() - world.click_pos[1])/ 500
+            if world.previously_scaled_up_red_box:
+                world.previously_scaled_up_red_box.scale -= 1
+                for point in world.previously_scaled_up_red_box.points:
+                    point[0, 1] += 0.005
 
 
-        world.click_pos[0] = get_mouse_x()
-        world.click_pos[1] = get_mouse_y()
+def red_box_interaction(world: World):
+    # Creates a list containing all boxes colliding with the mouse upon clicking
+    boxes_clicked = []
+    for type in world.boxes:
+        for box in type:
+            for face in box.faces:
+                if colliding_with_mouse(face):
+                    boxes_clicked.append(box)
 
+    # Checks if any boxes were clicked as a safeguard
+    if boxes_clicked:
+        # Calculates which of all clicked boxes is the closest to the camera using world.box_render_order
+        closest_clicked = boxes_clicked[0]
+        for box in world.box_render_order:
+            for box_clicked in boxes_clicked:
+                if box == box_clicked:
+                    closest_clicked = box_clicked
+
+        # Checks if the closest clicked box is red
+        if closest_clicked.color == "red":
+            world.is_clicking_interactable = True
+            if closest_clicked.scale == 50.0:
+                world.previously_scaled_up_red_box = world.scaled_up_red_box
+                world.scaled_up_red_box = closest_clicked
+            else:
+                world.scaled_up_red_box = None
+
+    else:
+        world.is_clicking_interactable = False
+
+    boxes_clicked.clear()
 
 def pan_start(world: World, x, y):
-    world.click_pos = [x, y]
-    world.is_clicking = True
+    if not world.is_clicking_interactable:
+        world.pan_pos = [x, y]
+        world.is_panning = True
+
+def pan_world(world: World):
+    world.angle[1] -= (get_mouse_x() - world.pan_pos[0]) / 500
+
+    if world.angle[1] % (m.pi * 2) < (m.pi / 2) or world.angle[1] % (m.pi * 2) >= (m.pi * 3 / 2):
+        world.angle[0] += (get_mouse_y() - world.pan_pos[1]) / 500
+    elif world.angle[1] % (m.pi * 2) >= (m.pi / 2) and world.angle[1] % (m.pi * 2) < (m.pi * 3 / 2):
+        world.angle[0] -= (get_mouse_y() - world.pan_pos[1]) / 500
+
+    world.pan_pos[0] = get_mouse_x()
+    world.pan_pos[1] = get_mouse_y()
 
 def pan_end(world: World):
-    world.is_clicking = False
+    world.is_panning = False
 
 
 def create_World() -> World:
-    box1 = create_box([1, 1, 1], [0, 0, 2], "white")
-    box2 = create_box([1,1,1], [0,0,0], "red")
-    box3 = create_box([1,1,1], [-1, 0, -1], "blue")
-    box4 = create_box([1,1,1], [2, 0, -1], "green")
+    white_boxes = [create_box([1, 1, 1], [0, 0, 2], "white")]
+    red_boxes = [create_box([1,1,1], [0,0,0], "red")]
+    blue_boxes = [create_box([1,1,1], [-1, 0, -1], "blue")]
+    green_boxes = [create_box([1,1,1], [2, 0, -1], "green")]
     base = create_box([8, 1, 8], [0, 1, 0], "white")
 
 
 
     set_window_color("black")
 
-    return World(base, [[box2],[box1],[box3],[box4]], [], [0.0, 0.0, 0.0], [0, 0], False)
+    return World(base, [white_boxes,red_boxes,blue_boxes,green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None)
 
 
 when('starting', create_World)
+
+when('clicking', red_box_interaction)
 
 when('input.mouse.down', pan_start)
 when('input.mouse.up', pan_end)
