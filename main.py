@@ -7,8 +7,9 @@ from dataclasses import dataclass
 class Box:
     color: str
     scale: float
-    points: list[list[float]]
-    projected_points: list[list[float]]
+    center: list[float] # [x,y,z]
+    points: list[list[float]] # [[x,y,z]]
+    projected_points: list[list[float]] # [[x,y]]
     vertices: list[DesignerObject]
     lines: list[DesignerObject]
     faces: list[DesignerObject]
@@ -16,7 +17,9 @@ class Box:
 
 @dataclass
 class World:
-    boxes: list[list[Box]] # [[Base], [White], [Red], [Blue], [Green]]
+    base: Box
+    boxes: list[list[Box]] # [[White], [Red], [Blue], [Green]]
+    box_render_order: list[Box]
     angle: list[float] # [x, y, z]
     click_pos: list[int]
     is_clicking: bool
@@ -101,7 +104,7 @@ def create_box(size: list[float], position: list[float], type: str) -> Box:
     for p in range(4):
         faces.append(create_face(type, p, (p + 1) % 4, (p + 1) % 4 + 4, p + 4, projected_points))
 
-    return Box(type, starting_scale, points, projected_points, vertices, lines, faces)
+    return Box(type, starting_scale, position, points, projected_points, vertices, lines, faces)
 
 def destroy_box(box: Box):
     for vertex in box.vertices:
@@ -131,59 +134,113 @@ def update_boxes(world: World):
         [0, 0, 1]
     ])
 
+
+
     for type in world.boxes:
-        # Run through all 5 box types
+        # Run through all 4 box types
+
         for box in type:
-            # Update each box in each type
+            # This loop adds all boxes to a new list ordered from furthest to closest to the camera,
+            # therefore preventing layering issues upon rendering
 
-            destroy_box(box)
+            i = 0
 
-            for index, point in enumerate(box.points):
-                # @ is the matrix multiplication operator
-                # Use transpose to change point from 1x3 to 3x1 matrix to make multiplication with 2d matrix compatible
+            # When y rotation is between 45 degrees and 135 degrees, render from smallest x to largest x
+            if (m.pi * 2 / 8) <= world.angle[1] % (m.pi*2) < (m.pi * 2 / 8) * 3:
+                for render_box in world.box_render_order:
+                    if box.center[0] > render_box.center[0]:
+                        i += 1
 
-                # For each 3d coordinate, multiply by rotation_z to rotate points about the z axis
-                rotated2d = rotation_x_matrix @ point.transpose()
-                rotated2d = rotation_y_matrix @ rotated2d
-                rotated2d = rotation_z_matrix @ rotated2d
-                # For each 3d coordinate, multiply by projection_matrix to convert to 2d coordinate
-                projected2d = PROJECTION_MATRIX @ rotated2d
+            # When y rotation is between 135 degrees and 225 degrees, render from smallest z to largest z
+            if (m.pi * 2 / 8) * 3 <= world.angle[1] % (m.pi*2) < (m.pi * 2 / 8) * 5:
+                for render_box in world.box_render_order:
+                    if box.center[2] > render_box.center[2]:
+                        i += 1
 
-                # Set projected x and y values for each coordinate
-                x = projected2d[0, 0] * box.scale + CENTER[0]
-                y = projected2d[1, 0] * box.scale + CENTER[1]
+            # When y rotation is between 225 degrees and 315 degrees, render from largest x to smallest x
+            if (m.pi * 2 / 8) * 5 <= world.angle[1] % (m.pi*2) < (m.pi * 2 / 8) * 7:
+                for render_box in world.box_render_order:
+                    if box.center[0] < render_box.center[0]:
+                        i += 1
 
-                # Add x and y values to list of projected points
-                box.projected_points[index] = [x, y]
+            # When y rotation is greater than 315 degrees or fewer than 45 degrees, render from largest z to smallest z
+            if (m.pi * 2 / 8) * 7 <= world.angle[1] % (m.pi*2) or world.angle[1] % (m.pi*2) < (m.pi * 2 / 8):
+                for render_box in world.box_render_order:
+                    if box.center[2] < render_box.center[2]:
+                        i += 1
 
-                # Move corresponding vertices to newly calculated positions
-                box.vertices[index].x = x
-                box.vertices[index].y = y
-
-            # Generates 6 new faces
-            box.faces[0] = create_face(box.color, 0, 1, 2, 3, box.projected_points)
-            box.faces[1] = create_face(box.color, 4, 5, 6, 7, box.projected_points)
-            for p in range(4):
-                box.faces[p + 2] = create_face(box.color, p, (p + 1) % 4, (p + 1) % 4 + 4, p + 4, box.projected_points)\
+            world.box_render_order.insert(i, box)
 
 
-            # Generates 12 new lines
-            for p in range(4):
-                box.lines[p] = create_line(p, (p + 1) % 4, box.projected_points)
-                box.lines[p + 4] = create_line(p + 4, (p + 1) % 4 + 4, box.projected_points)
-                box.lines[p + 8] = create_line(p, p + 4, box.projected_points)
+    # Rendering level base before or after cubes based on x rotation
+    if world.angle[0] % (m.pi*2) > m.pi and (world.angle[1] % (m.pi*2) <= (m.pi/2) or world.angle[1] % (m.pi*2) > (m.pi*3/2)):
+        world.box_render_order.append(world.base)
+    elif world.angle[0] % (m.pi*2) < m.pi and ((m.pi/2) < world.angle[1] % (m.pi*2) < (m.pi*3/2)):
+        world.box_render_order.append(world.base)
+    else:
+        world.box_render_order.insert(0, world.base)
 
-            # Generates 8 new vertices
-            for index, projected_point in enumerate(box.projected_points):
-                box.vertices[index] = circle("black", 5, projected_point[0], projected_point[1])
 
-            # Code for rotating box with mouse pan
-            if world.is_clicking:
-                world.angle[1] += -(get_mouse_x() - world.click_pos[0]) / 500
-                world.angle[0] += (get_mouse_y() - world.click_pos[1]) / 500
 
-                world.click_pos[0] = get_mouse_x()
-                world.click_pos[1] = get_mouse_y()
+    for box in world.box_render_order:
+        # Update each box based on box_render_order
+
+        destroy_box(box)
+
+        for index, point in enumerate(box.points):
+            # @ is the matrix multiplication operator
+            # Use transpose to change point from 1x3 to 3x1 matrix to make multiplication with 2d matrix compatible
+
+            # For each 3d coordinate, multiply by rotation_z to rotate points about the z axis
+            rotated2d = rotation_x_matrix @ point.transpose()
+            rotated2d = rotation_y_matrix @ rotated2d
+            rotated2d = rotation_z_matrix @ rotated2d
+            # For each 3d coordinate, multiply by projection_matrix to convert to 2d coordinate
+            projected2d = PROJECTION_MATRIX @ rotated2d
+
+            # Set projected x and y values for each coordinate
+            x = projected2d[0, 0] * box.scale + CENTER[0]
+            y = projected2d[1, 0] * box.scale + CENTER[1]
+
+            # Add x and y values to list of projected points
+            box.projected_points[index] = [x, y]
+
+            # Move corresponding vertices to newly calculated positions
+            box.vertices[index].x = x
+            box.vertices[index].y = y
+
+        # Generates 6 new faces
+        box.faces[0] = create_face(box.color, 0, 1, 2, 3, box.projected_points)
+        box.faces[1] = create_face(box.color, 4, 5, 6, 7, box.projected_points)
+        for p in range(4):
+            box.faces[p + 2] = create_face(box.color, p, (p + 1) % 4, (p + 1) % 4 + 4, p + 4, box.projected_points)\
+
+
+        # Generates 12 new lines
+        for p in range(4):
+            box.lines[p] = create_line(p, (p + 1) % 4, box.projected_points)
+            box.lines[p + 4] = create_line(p + 4, (p + 1) % 4 + 4, box.projected_points)
+            box.lines[p + 8] = create_line(p, p + 4, box.projected_points)
+
+        # Generates 8 new vertices
+        for index, projected_point in enumerate(box.projected_points):
+            box.vertices[index] = circle("black", 5, projected_point[0], projected_point[1])
+
+
+    world.box_render_order.clear()
+
+    # Code for rotating box with mouse pan
+    if world.is_clicking:
+        world.angle[1] -= (get_mouse_x() - world.click_pos[0]) / 500
+        world.angle[0] += (get_mouse_y() - world.click_pos[1]) / 500
+        # if world.angle[1] % (m.pi*2) < (m.pi*2)/8 or world.angle[1] % (m.pi*2) >= (m.pi*2)*7/8:
+        #     world.angle[0] += (get_mouse_y() - world.click_pos[1]) / 500
+        # elif world.angle[1] % (m.pi*2) >= (m.pi*2)/8 and world.angle[1] % (m.pi*2) < (m.pi*2)*3/8:
+        #     world.angle[2] += (get_mouse_y() - world.click_pos[1])/ 500
+
+
+        world.click_pos[0] = get_mouse_x()
+        world.click_pos[1] = get_mouse_y()
 
 
 def pan_start(world: World, x, y):
@@ -195,12 +252,17 @@ def pan_end(world: World):
 
 
 def create_World() -> World:
-    base = create_box([8,1,8], [0,1,0], "white")
     box1 = create_box([1, 1, 1], [0, 0, 2], "white")
     box2 = create_box([1,1,1], [0,0,0], "red")
     box3 = create_box([1,1,1], [-1, 0, -1], "blue")
     box4 = create_box([1,1,1], [2, 0, -1], "green")
-    return World([[base],[box1],[box2],[box3],[box4]], [0.0, 0.0, 0.0], [0, 0], False)
+    base = create_box([8, 1, 8], [0, 1, 0], "white")
+
+
+
+    set_window_color("black")
+
+    return World(base, [[box2],[box1],[box3],[box4]], [], [0.0, 0.0, 0.0], [0, 0], False)
 
 
 when('starting', create_World)
