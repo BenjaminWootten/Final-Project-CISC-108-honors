@@ -232,11 +232,11 @@ def update_boxes(world: World):
     # Code for rotating box with mouse pan
     if world.is_clicking:
         world.angle[1] -= (get_mouse_x() - world.click_pos[0]) / 500
-        world.angle[0] += (get_mouse_y() - world.click_pos[1]) / 500
-        # if world.angle[1] % (m.pi*2) < (m.pi*2)/8 or world.angle[1] % (m.pi*2) >= (m.pi*2)*7/8:
-        #     world.angle[0] += (get_mouse_y() - world.click_pos[1]) / 500
-        # elif world.angle[1] % (m.pi*2) >= (m.pi*2)/8 and world.angle[1] % (m.pi*2) < (m.pi*2)*3/8:
-        #     world.angle[2] += (get_mouse_y() - world.click_pos[1])/ 500
+
+        if world.angle[1] % (m.pi*2) < (m.pi/2) or world.angle[1] % (m.pi*2) >= (m.pi*3/2):
+            world.angle[0] += (get_mouse_y() - world.click_pos[1]) / 500
+        elif world.angle[1] % (m.pi*2) >= (m.pi/2) and world.angle[1] % (m.pi*2) < (m.pi*3/2):
+            world.angle[0] -= (get_mouse_y() - world.click_pos[1])/ 500
 
 
         world.click_pos[0] = get_mouse_x()
