@@ -19,7 +19,7 @@ class Box:
 @dataclass
 class World:
     base: Box
-    boxes: list[list[Box]] # [[White], [Red], [Blue], [Green]]
+    boxes: list[list[Box]] # [[Red], [White], [Blue], [Green]]
     box_render_order: list[Box]
     angle: list[float] # [x, y, z]
     pan_pos: list[int]
@@ -162,24 +162,61 @@ def update_boxes(world: World):
                 for render_box in world.box_render_order:
                     if box.center[0] > render_box.center[0]:
                         i += 1
+                    # If 2 boxes have the same x, check if rotation is greater than or less than 90 degrees and render
+                    # based on z value
+                    elif box.center[0] == render_box.center[0]:
+                        if world.angle[1] % (m.pi*2) > (m.pi * 2 / 8) * 2:
+                            if box.center[2] > render_box.center[2]:
+                                i += 1
+                        else:
+                            if box.center[2] < render_box.center[2]:
+                                i += 1
 
             # When y rotation is between 135 degrees and 225 degrees, render from smallest z to largest z
             if (m.pi * 2 / 8) * 3 <= world.angle[1] % (m.pi*2) < (m.pi * 2 / 8) * 5:
                 for render_box in world.box_render_order:
                     if box.center[2] > render_box.center[2]:
                         i += 1
+                    # If 2 boxes have the same z, check if rotation is greater than or less than 180 degrees and render
+                    # based on x value
+                    elif box.center[2] == render_box.center[2]:
+                        if world.angle[1] % (m.pi * 2) > (m.pi * 2 / 8) * 4:
+                            if box.center[0] < render_box.center[0]:
+                                i += 1
+                        else:
+                            if box.center[0] > render_box.center[0]:
+                                i += 1
 
             # When y rotation is between 225 degrees and 315 degrees, render from largest x to smallest x
             if (m.pi * 2 / 8) * 5 <= world.angle[1] % (m.pi*2) < (m.pi * 2 / 8) * 7:
                 for render_box in world.box_render_order:
                     if box.center[0] < render_box.center[0]:
                         i += 1
+                    # If 2 boxes have the same x, check if rotation is greater than or less than 270 degrees and render
+                    # based on z value
+                    elif box.center[0] == render_box.center[0]:
+                        if world.angle[1] % (m.pi * 2) > (m.pi * 2 / 8) * 6:
+                            if box.center[2] < render_box.center[2]:
+                                i += 1
+                        else:
+                            if box.center[2] > render_box.center[2]:
+                                i += 1
 
             # When y rotation is greater than 315 degrees or fewer than 45 degrees, render from largest z to smallest z
             if (m.pi * 2 / 8) * 7 <= world.angle[1] % (m.pi*2) or world.angle[1] % (m.pi*2) < (m.pi * 2 / 8):
                 for render_box in world.box_render_order:
                     if box.center[2] < render_box.center[2]:
                         i += 1
+                    # If 2 boxes have the same z, check if rotation is less than 45 degrees or greater than 315 degrees
+                    # and render based on x value
+                    elif box.center[2] == render_box.center[2]:
+                        if world.angle[1] % (m.pi * 2) < (m.pi/2):
+                            if box.center[0] > render_box.center[0]:
+                                i += 1
+                        else:
+                            if box.center[0] < render_box.center[0]:
+                                i += 1
+
 
             world.box_render_order.insert(i, box)
 
@@ -246,13 +283,15 @@ def update_boxes(world: World):
     if world.is_panning:
         pan_world(world)
 
+
     scale_speed = 0.05
-    # Red box scaling
+    scale_limit = 2
+
+    # Scales up red box when it is clicked
     if world.scaled_up_red_box:
-        if world.scaled_up_red_box.size[0] < 2:
+        if world.scaled_up_red_box.size[0] < scale_limit:
             scale_points(world.scaled_up_red_box, scale_speed)
-
-
+            # Checks if there is a red box currently scaled up and scales it down
             if world.previously_scaled_up_red_box:
                 scale_points(world.previously_scaled_up_red_box, -scale_speed)
 
@@ -310,17 +349,16 @@ def pan_end(world: World):
 
 
 def create_World() -> World:
+    red_boxes = [create_box([1,1,1], [0,0,0], "red"), create_box([1,1,1], [-2,0,0], "red")]
     white_boxes = [create_box([1, 1, 1], [0, 0, 2], "white")]
-    red_boxes = [create_box([1,1,1], [0,0,0], "red"), create_box([1,1,1], [-2,0,1], "red")]
-    blue_boxes = [create_box([1,1,1], [-1, 0, -1], "blue")]
-    green_boxes = [create_box([1,1,1], [2, 0, -1], "green")]
+    blue_boxes = [create_box([1,1,1], [0, 0, -2], "blue")]
+    green_boxes = [create_box([1,1,1], [2, 0, 0], "green")]
     base = create_box([8, 1, 8], [0, 1, 0], "white")
-
 
 
     set_window_color("black")
 
-    return World(base, [white_boxes,red_boxes,blue_boxes,green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None)
+    return World(base, [red_boxes, white_boxes,blue_boxes,green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None)
 
 
 when('starting', create_World)
