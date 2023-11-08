@@ -21,7 +21,7 @@ Phase 1 task list:
 - [x] Function to create a box on the level base and declare its type
 - [x] 1 basic level for testing mechanics exists
 - [x] Red boxes can be scaled by the player clicking on them
-- [ ] Scaling up one red box will scale all others back to their original size,
+- [x] Scaling up one red box will scale all others back to their original size,
         meaning only one can be scaled up at a time
 
 Phase 2 task list:
