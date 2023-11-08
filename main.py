@@ -25,6 +25,7 @@ class World:
     pan_pos: list[int]
     is_panning: bool
     is_clicking_interactable: bool
+    is_scaling: bool
     scaled_up_red_box: Box
     previously_scaled_up_red_box: Box
 
@@ -317,11 +318,10 @@ def red_box_interaction(world: World):
         # Checks if the closest clicked box is red
         if closest_clicked.color == "red":
             world.is_clicking_interactable = True
-            if closest_clicked.scale == 1.0:
+            world.is_scaling = True
+            if closest_clicked.scale == 1.0 and closest_clicked != world.scaled_up_red_box:
                 world.previously_scaled_up_red_box = world.scaled_up_red_box
                 world.scaled_up_red_box = closest_clicked
-            else:
-                world.scaled_up_red_box = None
 
     else:
         world.is_clicking_interactable = False
@@ -358,7 +358,7 @@ def create_World() -> World:
 
     set_window_color("black")
 
-    return World(base, [red_boxes, white_boxes,blue_boxes,green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None)
+    return World(base, [red_boxes, white_boxes,blue_boxes,green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False, False, None, None)
 
 
 when('starting', create_World)
