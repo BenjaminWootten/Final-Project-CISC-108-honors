@@ -14,6 +14,8 @@ class Box:
     vertices: list[DesignerObject]
     lines: list[DesignerObject]
     faces: list[DesignerObject]
+    is_moving: bool
+    movement: list[float] # [x,y,z]
 
 
 @dataclass
@@ -25,7 +27,6 @@ class World:
     pan_pos: list[int]
     is_panning: bool
     is_clicking_interactable: bool
-    is_scaling: bool
     scaled_up_red_box: Box
     previously_scaled_up_red_box: Box
 
@@ -116,7 +117,7 @@ def create_box(size: list[float], position: list[float], type: str) -> Box:
     for p in range(4):
         faces.append(create_face(type, p, (p + 1) % 4, (p + 1) % 4 + 4, p + 4, projected_points))
 
-    return Box(type, starting_scale, size, position, points, projected_points, vertices, lines, faces)
+    return Box(type, starting_scale, size, position, points, projected_points, vertices, lines, faces, False, [0.0, 0.0, 0.0])
 
 def destroy_box(box: Box):
     for vertex in box.vertices:
@@ -146,90 +147,8 @@ def update_boxes(world: World):
         [0, 0, 1]
     ])
 
-    # Clear render order so it can be recalculated
-    world.box_render_order.clear()
 
-    for type in world.boxes:
-        # Run through all 4 box types
-
-        for box in type:
-            # This loop adds all boxes to a new list insertion sorted from furthest to closest to the camera,
-            # therefore preventing layering issues upon rendering
-
-            i = 0
-
-            # When y rotation is between 45 degrees and 135 degrees, render from smallest x to largest x
-            if (m.pi * 2 / 8) <= world.angle[1] % (m.pi*2) < (m.pi * 2 / 8) * 3:
-                for render_box in world.box_render_order:
-                    if box.center[0] > render_box.center[0]:
-                        i += 1
-                    # If 2 boxes have the same x, check if rotation is greater than or less than 90 degrees and render
-                    # based on z value
-                    elif box.center[0] == render_box.center[0]:
-                        if world.angle[1] % (m.pi*2) > (m.pi * 2 / 8) * 2:
-                            if box.center[2] > render_box.center[2]:
-                                i += 1
-                        else:
-                            if box.center[2] < render_box.center[2]:
-                                i += 1
-
-            # When y rotation is between 135 degrees and 225 degrees, render from smallest z to largest z
-            if (m.pi * 2 / 8) * 3 <= world.angle[1] % (m.pi*2) < (m.pi * 2 / 8) * 5:
-                for render_box in world.box_render_order:
-                    if box.center[2] > render_box.center[2]:
-                        i += 1
-                    # If 2 boxes have the same z, check if rotation is greater than or less than 180 degrees and render
-                    # based on x value
-                    elif box.center[2] == render_box.center[2]:
-                        if world.angle[1] % (m.pi * 2) > (m.pi * 2 / 8) * 4:
-                            if box.center[0] < render_box.center[0]:
-                                i += 1
-                        else:
-                            if box.center[0] > render_box.center[0]:
-                                i += 1
-
-            # When y rotation is between 225 degrees and 315 degrees, render from largest x to smallest x
-            if (m.pi * 2 / 8) * 5 <= world.angle[1] % (m.pi*2) < (m.pi * 2 / 8) * 7:
-                for render_box in world.box_render_order:
-                    if box.center[0] < render_box.center[0]:
-                        i += 1
-                    # If 2 boxes have the same x, check if rotation is greater than or less than 270 degrees and render
-                    # based on z value
-                    elif box.center[0] == render_box.center[0]:
-                        if world.angle[1] % (m.pi * 2) > (m.pi * 2 / 8) * 6:
-                            if box.center[2] < render_box.center[2]:
-                                i += 1
-                        else:
-                            if box.center[2] > render_box.center[2]:
-                                i += 1
-
-            # When y rotation is greater than 315 degrees or fewer than 45 degrees, render from largest z to smallest z
-            if (m.pi * 2 / 8) * 7 <= world.angle[1] % (m.pi*2) or world.angle[1] % (m.pi*2) < (m.pi * 2 / 8):
-                for render_box in world.box_render_order:
-                    if box.center[2] < render_box.center[2]:
-                        i += 1
-                    # If 2 boxes have the same z, check if rotation is less than 45 degrees or greater than 315 degrees
-                    # and render based on x value
-                    elif box.center[2] == render_box.center[2]:
-                        if world.angle[1] % (m.pi * 2) < (m.pi/2):
-                            if box.center[0] > render_box.center[0]:
-                                i += 1
-                        else:
-                            if box.center[0] < render_box.center[0]:
-                                i += 1
-
-
-            world.box_render_order.insert(i, box)
-
-
-    # Rendering level base before or after cubes based on x rotation
-    if world.angle[0] % (m.pi*2) > m.pi and (world.angle[1] % (m.pi*2) <= (m.pi/2) or world.angle[1] % (m.pi*2) > (m.pi*3/2)):
-        world.box_render_order.append(world.base)
-    elif world.angle[0] % (m.pi*2) < m.pi and ((m.pi/2) < world.angle[1] % (m.pi*2) < (m.pi*3/2)):
-        world.box_render_order.append(world.base)
-    else:
-        world.box_render_order.insert(0, world.base)
-
+    calculate_render_order(world)
 
 
     for box in world.box_render_order:
@@ -240,6 +159,7 @@ def update_boxes(world: World):
         box.points.clear()
         box.points = generate_points(box.size, box.center)
 
+        # Calculating rotation and projection
         for index, point in enumerate(box.points):
             # @ is the matrix multiplication operator
             # Use transpose to change point from 1x3 to 3x1 matrix to make multiplication with 2d matrix compatible
@@ -262,12 +182,13 @@ def update_boxes(world: World):
             box.vertices[index].x = x
             box.vertices[index].y = y
 
+
+        # Reloading box geometry
         # Generates 6 new faces
         box.faces[0] = create_face(box.color, 0, 1, 2, 3, box.projected_points)
         box.faces[1] = create_face(box.color, 4, 5, 6, 7, box.projected_points)
         for p in range(4):
             box.faces[p + 2] = create_face(box.color, p, (p + 1) % 4, (p + 1) % 4 + 4, p + 4, box.projected_points)\
-
 
         # Generates 12 new lines
         for p in range(4):
@@ -285,16 +206,93 @@ def update_boxes(world: World):
         pan_world(world)
 
 
-    scale_speed = 0.05
-    scale_limit = 2
+    scale_red_box(world)
+    move_blue_box(world)
 
-    # Scales up red box when it is clicked
-    if world.scaled_up_red_box:
-        if world.scaled_up_red_box.size[0] < scale_limit:
-            scale_points(world.scaled_up_red_box, scale_speed)
-            # Checks if there is a red box currently scaled up and scales it down
-            if world.previously_scaled_up_red_box:
-                scale_points(world.previously_scaled_up_red_box, -scale_speed)
+
+def calculate_render_order(world: World):
+    # Clear render order so it can be recalculated
+    world.box_render_order.clear()
+
+    for type in world.boxes:
+        # Run through all 4 box types
+
+        for box in type:
+            # This loop adds all boxes to a new list insertion sorted from furthest to closest to the camera,
+            # therefore preventing layering issues upon rendering
+
+            i = 0
+
+            # When y rotation is between 45 degrees and 135 degrees, render from smallest x to largest x
+            if (m.pi * 2 / 8) <= world.angle[1] % (m.pi * 2) < (m.pi * 2 / 8) * 3:
+                for render_box in world.box_render_order:
+                    if box.center[0] > render_box.center[0]:
+                        i += 1
+                    # If 2 boxes have the same x, check if rotation is greater than or less than 90 degrees and render
+                    # based on z value
+                    elif box.center[0] == render_box.center[0]:
+                        if world.angle[1] % (m.pi * 2) > (m.pi * 2 / 8) * 2:
+                            if box.center[2] > render_box.center[2]:
+                                i += 1
+                        else:
+                            if box.center[2] < render_box.center[2]:
+                                i += 1
+
+            # When y rotation is between 135 degrees and 225 degrees, render from smallest z to largest z
+            if (m.pi * 2 / 8) * 3 <= world.angle[1] % (m.pi * 2) < (m.pi * 2 / 8) * 5:
+                for render_box in world.box_render_order:
+                    if box.center[2] > render_box.center[2]:
+                        i += 1
+                    # If 2 boxes have the same z, check if rotation is greater than or less than 180 degrees and render
+                    # based on x value
+                    elif box.center[2] == render_box.center[2]:
+                        if world.angle[1] % (m.pi * 2) > (m.pi * 2 / 8) * 4:
+                            if box.center[0] < render_box.center[0]:
+                                i += 1
+                        else:
+                            if box.center[0] > render_box.center[0]:
+                                i += 1
+
+            # When y rotation is between 225 degrees and 315 degrees, render from largest x to smallest x
+            if (m.pi * 2 / 8) * 5 <= world.angle[1] % (m.pi * 2) < (m.pi * 2 / 8) * 7:
+                for render_box in world.box_render_order:
+                    if box.center[0] < render_box.center[0]:
+                        i += 1
+                    # If 2 boxes have the same x, check if rotation is greater than or less than 270 degrees and render
+                    # based on z value
+                    elif box.center[0] == render_box.center[0]:
+                        if world.angle[1] % (m.pi * 2) > (m.pi * 2 / 8) * 6:
+                            if box.center[2] < render_box.center[2]:
+                                i += 1
+                        else:
+                            if box.center[2] > render_box.center[2]:
+                                i += 1
+
+            # When y rotation is greater than 315 degrees or fewer than 45 degrees, render from largest z to smallest z
+            if (m.pi * 2 / 8) * 7 <= world.angle[1] % (m.pi * 2) or world.angle[1] % (m.pi * 2) < (m.pi * 2 / 8):
+                for render_box in world.box_render_order:
+                    if box.center[2] < render_box.center[2]:
+                        i += 1
+                    # If 2 boxes have the same z, check if rotation is less than 45 degrees or greater than 315 degrees
+                    # and render based on x value
+                    elif box.center[2] == render_box.center[2]:
+                        if world.angle[1] % (m.pi * 2) < (m.pi / 2):
+                            if box.center[0] > render_box.center[0]:
+                                i += 1
+                        else:
+                            if box.center[0] < render_box.center[0]:
+                                i += 1
+
+            world.box_render_order.insert(i, box)
+
+    # Rendering level base before or after cubes based on x rotation
+    if world.angle[0] % (m.pi * 2) > m.pi and (
+            world.angle[1] % (m.pi * 2) <= (m.pi / 2) or world.angle[1] % (m.pi * 2) > (m.pi * 3 / 2)):
+        world.box_render_order.append(world.base)
+    elif world.angle[0] % (m.pi * 2) < m.pi and ((m.pi / 2) < world.angle[1] % (m.pi * 2) < (m.pi * 3 / 2)):
+        world.box_render_order.append(world.base)
+    else:
+        world.box_render_order.insert(0, world.base)
 
 
 def red_box_interaction(world: World):
@@ -318,15 +316,54 @@ def red_box_interaction(world: World):
         # Checks if the closest clicked box is red
         if closest_clicked.color == "red":
             world.is_clicking_interactable = True
-            world.is_scaling = True
             if closest_clicked.scale == 1.0 and closest_clicked != world.scaled_up_red_box:
                 world.previously_scaled_up_red_box = world.scaled_up_red_box
                 world.scaled_up_red_box = closest_clicked
+            else:
+                world.is_clicking_interactable = False
 
     else:
         world.is_clicking_interactable = False
 
     boxes_clicked.clear()
+
+def scale_red_box(world: World):
+    scale_speed= 0.05
+    scale_limit = 2
+
+    # Scales up red box when it is clicked
+    if world.scaled_up_red_box:
+        if world.scaled_up_red_box.size[0] < scale_limit:
+            scale_points(world.scaled_up_red_box, scale_speed)
+            world.scaled_up_red_box.scale += scale_speed
+            # Checks if there is a red box currently scaled up and scales it down
+            if world.previously_scaled_up_red_box:
+                scale_points(world.previously_scaled_up_red_box, -scale_speed)
+                world.previously_scaled_up_red_box.scale -= scale_speed
+
+def move_blue_box(world: World):
+    if world.scaled_up_red_box:
+        for blue_box in world.boxes[2]:
+            if world.scaled_up_red_box.center[0] == blue_box.center[0]:
+                if world.scaled_up_red_box.center[2] == blue_box.center[2] - 1:
+                    blue_box.is_moving = True
+                    blue_box.movement[2] = 0.025
+                elif world.scaled_up_red_box.center[2] == blue_box.center[2] + 1:
+                    blue_box.is_moving = True
+                    blue_box.movement[2] = -0.025
+
+            elif world.scaled_up_red_box.center[2] == blue_box.center[2]:
+                if world.scaled_up_red_box.center[0] == blue_box.center[0] - 1:
+                    blue_box.is_moving = True
+                    blue_box.movement[0] = 0.025
+                elif world.scaled_up_red_box.center[0] == blue_box.center[0] + 1:
+                    blue_box.is_moving = True
+                    blue_box.movement[0] = -0.025
+            if blue_box.is_moving:
+                blue_box.center[2] += blue_box.movement[2]
+                blue_box.center[0] += blue_box.movement[0]
+                if world.scaled_up_red_box.scale >= 2.0:
+                    blue_box.is_moving = False
 
 def pan_start(world: World, x, y):
     if not world.is_clicking_interactable:
@@ -349,16 +386,19 @@ def pan_end(world: World):
 
 
 def create_World() -> World:
-    red_boxes = [create_box([1,1,1], [0,0,0], "red"), create_box([1,1,1], [-2,0,0], "red")]
-    white_boxes = [create_box([1, 1, 1], [0, 0, 2], "white")]
-    blue_boxes = [create_box([1,1,1], [0, 0, -2], "blue")]
-    green_boxes = [create_box([1,1,1], [2, 0, 0], "green")]
+    red_boxes = [create_box([1,1,1], [0,0,0], "red")]
+    white_boxes = [create_box([1, 1, 1], [3, 0, 3], "white")]
+    blue_boxes = [create_box([1,1,1], [1, 0, 0], "blue"),
+                  create_box([1,1,1], [0,0,1], "blue"),
+                  create_box([1,1,1], [-1,0,0], "blue"),
+                  create_box([1,1,1], [0,0,-1], "blue")]
+    green_boxes = [create_box([1,1,1], [-3, 0, -3], "green")]
     base = create_box([8, 1, 8], [0, 1, 0], "white")
 
 
     set_window_color("black")
 
-    return World(base, [red_boxes, white_boxes,blue_boxes,green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False, False, None, None)
+    return World(base, [red_boxes, white_boxes, blue_boxes, green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None)
 
 
 when('starting', create_World)
