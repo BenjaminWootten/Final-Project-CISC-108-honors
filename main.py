@@ -60,29 +60,11 @@ def generate_points(size: list[float], position: list[float]) -> list[[]]:
 
     return points
 
-def scale_points(box: Box, scale: float) -> list[[]]:
+def scale_points(box: Box, scale: float):
     box.size[0] += scale
     box.size[1] += scale
     box.size[2] += scale
-    points = []
-    xpos = box.center[0]
-    ypos = box.center[1]
-    zpos = box.center[2]
-    xsize = box.size[0]
-    ysize = box.size[1]
-    zsize = box.size[2]
-    # top 4 points
-    points.append(np.matrix([xpos - xsize / 2, ypos - ysize / 2, zpos + zsize / 2]))
-    points.append(np.matrix([xpos + xsize / 2, ypos - ysize / 2, zpos + zsize / 2]))
-    points.append(np.matrix([xpos + xsize / 2, ypos + ysize / 2, zpos + zsize / 2]))
-    points.append(np.matrix([xpos - xsize / 2, ypos + ysize / 2, zpos + zsize / 2]))
-    # bottom 4 points
-    points.append(np.matrix([xpos - xsize / 2, ypos - ysize / 2, zpos - zsize / 2]))
-    points.append(np.matrix([xpos + xsize / 2, ypos - ysize / 2, zpos - zsize / 2]))
-    points.append(np.matrix([xpos + xsize / 2, ypos + ysize / 2, zpos - zsize / 2]))
-    points.append(np.matrix([xpos - xsize / 2, ypos + ysize / 2, zpos - zsize / 2]))
-
-    return points
+    box.center[1] -= scale/2
 
 def create_line(i: int, j: int, points) -> DesignerObject:
     # Returns a line connecting points at indexes i and j in list points
@@ -268,11 +250,11 @@ def update_boxes(world: World):
     # Red box scaling
     if world.scaled_up_red_box:
         if world.scaled_up_red_box.size[0] < 2:
-            world.scaled_up_red_box.points = scale_points(world.scaled_up_red_box, scale_speed)
+            scale_points(world.scaled_up_red_box, scale_speed)
 
 
             if world.previously_scaled_up_red_box:
-                world.previously_scaled_up_red_box.points = scale_points(world.previously_scaled_up_red_box, -scale_speed)
+                scale_points(world.previously_scaled_up_red_box, -scale_speed)
 
 
 def red_box_interaction(world: World):
