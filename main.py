@@ -32,7 +32,9 @@ class World:
 
 
 CENTER = [get_width()/2, get_height()/2]
-SCALE = 50.0
+SCALE = 50.0 # Scale for rendering
+SCALE_MAX = 3.0 # Max size of red boxes
+SCALE_SPEED = 0.05 # Scale speed of red boxes
 
 PROJECTION_MATRIX = np.matrix([
     [1, 0, 0],
@@ -41,7 +43,16 @@ PROJECTION_MATRIX = np.matrix([
 
 
 def generate_points(size: list[float], position: list[float]) -> list[[]]:
-    # Returns a list of points representing a box based on the given xyz size and xyz position
+    '''
+    This function generates a set of 3d coordinates representing the 8 vertices of a box
+
+    Args:
+        size (list[float]): a list of 3 floats representing the x, y, and z sizes of the box
+        position (list[float]): a list of 3 floats representing the x, y, and z positions of the box
+
+    Returns:
+        list[[]]: A list of 8 3x1 NumPy matrices, representing the x, y, and z position of the 8 vertices
+    '''
     points = []
     xpos = position[0]
     ypos = position[1]
@@ -63,21 +74,70 @@ def generate_points(size: list[float], position: list[float]) -> list[[]]:
     return points
 
 def scale_points(box: Box, scale: float):
+    '''
+    This function scales the given box by the given amount
+
+    Args:
+        box (Box): the box object to be scaled
+        scale (float): the amount to scale the box by
+
+    Returns:
+        None
+    '''
     box.size[0] += scale
     box.size[1] += scale
     box.size[2] += scale
     box.center[1] -= scale/2
 
-def create_line(i: int, j: int, points) -> DesignerObject:
+def create_line(i: int, j: int, points: list[[]]) -> DesignerObject:
+    '''
+    This function draws a line in the viewport, making up one edge of a box, based on the list of 2d coordinates and
+    2 indexes given
+
+    Args:
+        i (int): the index in the list of the first point of the line
+        j (int): the index in the list of the second point of the line
+        points (list[[]]): the list of 2d coordinates representing a projected cube to be used for drawing lines
+
+    Returns:
+        DesignerObject: The line object generated from the list and indexes
+    '''
     # Returns a line connecting points at indexes i and j in list points
     return line("black", points[i][0], points[i][1], points[j][0], points[j][1])
 
-def create_face(color: str, i: int, j: int, k: int, l: int, points) -> DesignerObject:
+def create_face(color: str, i: int, j: int, k: int, l: int, points: list[[]]) -> DesignerObject:
+    '''
+    This function draws a shape in the viewport, making up one face of a box, based on the list of 2d coordinates
+    and 2 indexes given
+
+    Args:
+        i (int): the index in the list of the first vertex of the shape
+        j (int): the index in the list of the second vertex of the shape
+        k (int): the index in the list of the third vertex of the shape
+        l (int): the index in the list of the fourth vertex of the shape
+        points (list[[]]): the list of 2d coordinates representing a projected cube to be used for drawing shapes
+
+    Returns:
+        DesignerObject: The shape object generated from the list and indexes
+    '''
     # Returns a shape of chosen color connecting points at indexes i, j, k, and l in list points
-    return shape(color, [points[i][0], points[i][1], points[j][0], points[j][1], points[k][0], points[k][1], points[l][0], points[l][1]], absolute=True, anchor='topleft')
+    return shape(color, [points[i][0], points[i][1], points[j][0], points[j][1], points[k][0], points[k][1],
+                         points[l][0], points[l][1]], absolute=True, anchor='topleft')
 
 
 def create_box(size: list[float], position: list[float], type: str) -> Box:
+    '''
+    This function generates a box object of the given size, position, and type
+
+    Args:
+        size (list[float]): a list containing the x, y, and z sizes of the box
+        position (list[float]): a list containing the x, y, and z positions of the box
+        type (str): can be either "base", "white", "red", "blue", or "green", which correspond to the color and
+        behavior of the box
+
+    Returns:
+        Box: the box object generated from the inputs
+    '''
     # Returns a box of given type, size, and center position
 
     starting_scale = 1.0
@@ -117,9 +177,20 @@ def create_box(size: list[float], position: list[float], type: str) -> Box:
     for p in range(4):
         faces.append(create_face(type, p, (p + 1) % 4, (p + 1) % 4 + 4, p + 4, projected_points))
 
-    return Box(type, starting_scale, size, position, points, projected_points, vertices, lines, faces, False, [0.0, 0.0, 0.0])
+    return Box(type, starting_scale, size, position, points, projected_points, vertices, lines, faces, False,
+               [0.0, 0.0, 0.0])
 
 def destroy_box(box: Box):
+    '''
+    This function destroys a box's rendered DesignerObjects, but not its data. This allows all the
+    DesignerObjects to be regenerated based on updated data
+
+    Args:
+        box (Box): the box to be destroyed
+
+    Returns:
+        None
+    '''
     for vertex in box.vertices:
         destroy(vertex)
     for line in box.lines:
@@ -128,7 +199,16 @@ def destroy_box(box: Box):
         destroy(face)
 
 def update_boxes(world: World):
+    '''
+    This function is run when updating and updates every box in the world. This includes updating size, position,
+    rotation, and projection of all boxes.
 
+    Args:
+        world (World): the current world data
+
+    Returns:
+        None
+    '''
     rotation_x_matrix = np.matrix([
         [1, 0, 0],
         [0, m.cos(world.angle[0]), -m.sin(world.angle[0])],
@@ -211,6 +291,16 @@ def update_boxes(world: World):
 
 
 def calculate_render_order(world: World):
+    '''
+    This function orders all boxes in the world in a list based on their position relative to the camera, assuring they
+    are rendered in the correct order
+
+    Args:
+        world (World): the current world data
+
+    Returns:
+        None
+    '''
     # Clear render order so it can be recalculated
     world.box_render_order.clear()
 
@@ -296,6 +386,7 @@ def calculate_render_order(world: World):
 
 
 def red_box_interaction(world: World):
+
     # Creates a list containing all boxes colliding with the mouse upon clicking
     boxes_clicked = []
     for type in world.boxes:
@@ -328,42 +419,46 @@ def red_box_interaction(world: World):
     boxes_clicked.clear()
 
 def scale_red_box(world: World):
-    scale_speed= 0.05
-    scale_limit = 2
 
     # Scales up red box when it is clicked
     if world.scaled_up_red_box:
-        if world.scaled_up_red_box.size[0] < scale_limit:
-            scale_points(world.scaled_up_red_box, scale_speed)
-            world.scaled_up_red_box.scale += scale_speed
+        if world.scaled_up_red_box.size[0] < SCALE_MAX:
+            scale_points(world.scaled_up_red_box, SCALE_SPEED)
+            world.scaled_up_red_box.scale += SCALE_SPEED
             # Checks if there is a red box currently scaled up and scales it down
             if world.previously_scaled_up_red_box:
-                scale_points(world.previously_scaled_up_red_box, -scale_speed)
-                world.previously_scaled_up_red_box.scale -= scale_speed
+                scale_points(world.previously_scaled_up_red_box, -SCALE_SPEED)
+                world.previously_scaled_up_red_box.scale -= SCALE_SPEED
 
 def move_blue_box(world: World):
     if world.scaled_up_red_box:
         for blue_box in world.boxes[2]:
+            # Check if there is a growing red box on each side of the blue box, and change movement
+            # vector in the opposite direction of the growing red box if there is
             if world.scaled_up_red_box.center[0] == blue_box.center[0]:
                 if world.scaled_up_red_box.center[2] == blue_box.center[2] - 1:
                     blue_box.is_moving = True
-                    blue_box.movement[2] = 0.025
+                    blue_box.movement[2] = SCALE_SPEED/2
                 elif world.scaled_up_red_box.center[2] == blue_box.center[2] + 1:
                     blue_box.is_moving = True
-                    blue_box.movement[2] = -0.025
+                    blue_box.movement[2] = -SCALE_SPEED/2
 
             elif world.scaled_up_red_box.center[2] == blue_box.center[2]:
                 if world.scaled_up_red_box.center[0] == blue_box.center[0] - 1:
                     blue_box.is_moving = True
-                    blue_box.movement[0] = 0.025
+                    blue_box.movement[0] = SCALE_SPEED/2
                 elif world.scaled_up_red_box.center[0] == blue_box.center[0] + 1:
                     blue_box.is_moving = True
-                    blue_box.movement[0] = -0.025
+                    blue_box.movement[0] = -SCALE_SPEED/2
+
+            # Update position based on movement vector
             if blue_box.is_moving:
-                blue_box.center[2] += blue_box.movement[2]
                 blue_box.center[0] += blue_box.movement[0]
-                if world.scaled_up_red_box.scale >= 2.0:
+                blue_box.center[2] += blue_box.movement[2]
+                if world.scaled_up_red_box.scale >= SCALE_MAX:
                     blue_box.is_moving = False
+                    blue_box.center[0] = round(blue_box.center[0])
+                    blue_box.center[2] = round(blue_box.center[2])
 
 def pan_start(world: World, x, y):
     if not world.is_clicking_interactable:
@@ -384,21 +479,62 @@ def pan_world(world: World):
 def pan_end(world: World):
     world.is_panning = False
 
+# def create_level(level: str, base_x, base_z) -> World:
+#     # # = empty
+#     # r = red
+#     # w = white
+#     # b = blue
+#     # g = green
+#     base = create_box([base_x, 1, base_z], [0,1,0], "base")
+#     red = []
+#     white = []
+#     blue = []
+#     green = []
+#
+#     i = 0
+#     j = 0
+#     for line in level.strip(" "):
+#         for character in line.strip(" "):
+#             print(character)
+#             if character == "r":
+#                 red.append(create_box([1,1,1], [i-4, 0, j-4], "red"))
+#             elif character == "w":
+#                 white.append(create_box([1,1,1], [i-4, 0, j-4], "white"))
+#             elif character == "b":
+#                 blue.append(create_box([1,1,1], [i-4,0,j-4], "blue"))
+#             elif character == "g":
+#                 green.append(create_box([1,1,1], [i-4,0,j-4], "green"))
+#             i+=1
+#         j+=1
+#     return(World(base, [red, white, blue, green], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None))
 
 def create_World() -> World:
-    red_boxes = [create_box([1,1,1], [0,0,0], "red")]
+    red_boxes = [create_box([1,1,1], [0,0,0], "red"),
+                 create_box([1,1,1], [-3,0,1], "red")]
     white_boxes = [create_box([1, 1, 1], [3, 0, 3], "white")]
     blue_boxes = [create_box([1,1,1], [1, 0, 0], "blue"),
                   create_box([1,1,1], [0,0,1], "blue"),
                   create_box([1,1,1], [-1,0,0], "blue"),
                   create_box([1,1,1], [0,0,-1], "blue")]
     green_boxes = [create_box([1,1,1], [-3, 0, -3], "green")]
-    base = create_box([8, 1, 8], [0, 1, 0], "white")
+    base = create_box([9, 1, 9], [0, 1, 0], "white")
 
 
     set_window_color("black")
 
-    return World(base, [red_boxes, white_boxes, blue_boxes, green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None)
+    return World(base, [red_boxes, white_boxes, blue_boxes, green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False,
+                 None, None)
+
+    # return create_level(
+    #     """r # # # # # # # #
+    #     # # # # # # # # #
+    #     # # # # # # # # #
+    #     # # # # # # # # #
+    #     # # # # r # # # #
+    #     # # # # # # # # #
+    #     # # # # # # # # #
+    #     # # # # # # # # #
+    #     # # # # # # # # #""", 9, 9)
 
 
 when('starting', create_World)
