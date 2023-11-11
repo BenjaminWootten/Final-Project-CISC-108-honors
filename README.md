@@ -24,6 +24,8 @@ Phase 1 task list:
 - [x] Scaling up one red box will scale all others back to their original size,
         meaning only one can be scaled up at a time
 
+Milestone 1: https://youtu.be/d-GdJBqEhjQ
+
 Phase 2 task list:
 This will likely be the most difficult part of the project as I will need to create
 some sort of collision system for the 3d objects
