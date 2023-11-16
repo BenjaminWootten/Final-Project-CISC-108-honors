@@ -29,8 +29,8 @@ Milestone 1: https://youtu.be/d-GdJBqEhjQ
 Phase 2 task list:
 This will likely be the most difficult part of the project as I will need to create
 some sort of collision system for the 3d objects
-- [X] Blue boxes can be pushed by red boxes
-- [ ] Red and blue boxes can be stopped by white boxes blocking them
+- [x] Blue boxes can be pushed by red boxes
+- [x] Red and blue boxes can be stopped by white boxes blocking them
 - [ ] Blue boxes can detect a level completion when they contact green boxes
 
 Phase 3 task list:
