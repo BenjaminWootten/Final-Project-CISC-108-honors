@@ -6,7 +6,6 @@ from dataclasses import dataclass
 @dataclass
 class Box:
     color: str
-    scale: float
     size: list[float] # [x,y,z]
     center: list[float] # [x,y,z]
     points: list[list[float]] # [[x,y,z]]
@@ -73,7 +72,7 @@ def generate_points(size: list[float], position: list[float]) -> list[[]]:
 
     return points
 
-def scale_points(box: Box, scale: float):
+def scale_points(box: Box, scale: list[float]):
     '''
     This function scales the given box by the given amount
 
@@ -84,10 +83,10 @@ def scale_points(box: Box, scale: float):
     Returns:
         None
     '''
-    box.size[0] += scale
-    box.size[1] += scale
-    box.size[2] += scale
-    box.center[1] -= scale/2
+    box.size[0] += scale[0]
+    box.size[1] += scale[1]
+    box.size[2] += scale[2]
+    box.center[1] -= scale[1]/2
 
 def create_line(i: int, j: int, points: list[[]]) -> DesignerObject:
     '''
@@ -140,7 +139,6 @@ def create_box(size: list[float], position: list[float], type: str) -> Box:
     '''
     # Returns a box of given type, size, and center position
 
-    starting_scale = 1.0
     projected_points = []
     vertices = []
     lines = []
@@ -177,7 +175,7 @@ def create_box(size: list[float], position: list[float], type: str) -> Box:
     for p in range(4):
         faces.append(create_face(type, p, (p + 1) % 4, (p + 1) % 4 + 4, p + 4, projected_points))
 
-    return Box(type, starting_scale, size, position, points, projected_points, vertices, lines, faces, False,
+    return Box(type, size, position, points, projected_points, vertices, lines, faces, False,
                [0.0, 0.0, 0.0])
 
 def destroy_box(box: Box):
@@ -285,8 +283,15 @@ def update_boxes(world: World):
     if world.is_panning:
         pan_world(world)
 
+    directions = [True, True, True]
 
-    scale_red_box(world)
+    if world.scaled_up_red_box:
+        directions[0] = (check_white_box_collision(world, world.scaled_up_red_box, 0, 1) and
+                         check_white_box_collision(world, world.scaled_up_red_box, 0, -1))
+        directions[2] = (check_white_box_collision(world, world.scaled_up_red_box, 2, 1) and
+                         check_white_box_collision(world, world.scaled_up_red_box, 2, -1))
+    print("")
+    scale_red_box(world, directions)
     move_blue_box(world)
 
 
@@ -407,7 +412,7 @@ def red_box_interaction(world: World):
         # Checks if the closest clicked box is red
         if closest_clicked.color == "red":
             world.is_clicking_interactable = True
-            if closest_clicked.scale == 1.0 and closest_clicked != world.scaled_up_red_box:
+            if closest_clicked.size[1] == 1.0 and closest_clicked != world.scaled_up_red_box:
                 world.previously_scaled_up_red_box = world.scaled_up_red_box
                 world.scaled_up_red_box = closest_clicked
             else:
@@ -418,24 +423,42 @@ def red_box_interaction(world: World):
 
     boxes_clicked.clear()
 
-def scale_red_box(world: World):
+def scale_red_box(world: World, directions: list[bool]):
 
-    # Scales up red box when it is clicked
+    scale_speed = [0,0,0]
+    if directions[0]:
+        scale_speed[0] = SCALE_SPEED
+    if directions[1]:
+        scale_speed[1] = SCALE_SPEED
+    if directions[2]:
+        scale_speed[2] = SCALE_SPEED
+
+
+    # Scales up red box when it is clicked and not already scaled
     if world.scaled_up_red_box:
-        if world.scaled_up_red_box.size[0] < SCALE_MAX:
-            scale_points(world.scaled_up_red_box, SCALE_SPEED)
-            world.scaled_up_red_box.scale += SCALE_SPEED
+        if world.scaled_up_red_box.size[1] < SCALE_MAX:
+
+            scale_points(world.scaled_up_red_box, scale_speed)
+
             # Checks if there is a red box currently scaled up and scales it down
             if world.previously_scaled_up_red_box:
-                scale_points(world.previously_scaled_up_red_box, -SCALE_SPEED)
-                world.previously_scaled_up_red_box.scale -= SCALE_SPEED
+                scale_down_speed = [0,0,0]
+                if world.previously_scaled_up_red_box.size[0] > 1.0:
+                    scale_down_speed[0] = -SCALE_SPEED
+                if world.previously_scaled_up_red_box.size[1] > 1.0:
+                    scale_down_speed[1] = -SCALE_SPEED
+                if world.previously_scaled_up_red_box.size[2] > 1.0:
+                    scale_down_speed[2] = -SCALE_SPEED
+                scale_points(world.previously_scaled_up_red_box, scale_down_speed)
 
 def move_blue_box(world: World):
+
     if world.scaled_up_red_box:
         for blue_box in world.boxes[2]:
             # Check if there is a growing red box on each side of the blue box, and change movement
             # vector in the opposite direction of the growing red box if there is
-            if world.scaled_up_red_box.center[0] == blue_box.center[0]:
+
+            if world.scaled_up_red_box.center[0] == blue_box.center[0] and world.scaled_up_red_box.size[2] > 1.0:
                 if world.scaled_up_red_box.center[2] == blue_box.center[2] - 1:
                     blue_box.is_moving = True
                     blue_box.movement[2] = SCALE_SPEED/2
@@ -443,7 +466,7 @@ def move_blue_box(world: World):
                     blue_box.is_moving = True
                     blue_box.movement[2] = -SCALE_SPEED/2
 
-            elif world.scaled_up_red_box.center[2] == blue_box.center[2]:
+            elif world.scaled_up_red_box.center[2] == blue_box.center[2] and world.scaled_up_red_box.size[0] > 1.0:
                 if world.scaled_up_red_box.center[0] == blue_box.center[0] - 1:
                     blue_box.is_moving = True
                     blue_box.movement[0] = SCALE_SPEED/2
@@ -455,10 +478,34 @@ def move_blue_box(world: World):
             if blue_box.is_moving:
                 blue_box.center[0] += blue_box.movement[0]
                 blue_box.center[2] += blue_box.movement[2]
-                if world.scaled_up_red_box.scale >= SCALE_MAX:
+                if world.scaled_up_red_box.size[1] >= SCALE_MAX:
                     blue_box.is_moving = False
                     blue_box.center[0] = round(blue_box.center[0])
                     blue_box.center[2] = round(blue_box.center[2])
+
+def check_white_box_collision(world: World, checked_box: Box, axis: int, direction: int) -> bool:
+    # Run through all boxes in the world and filter out any that aren't white or blue
+    other_axis = 0
+    if axis == 0:
+        other_axis = 2
+
+    for index, type in enumerate(world.boxes):
+        if index == 1 or index == 2: # 1 is white, 2 is blue
+            for box in type:
+                if (checked_box.center[axis] == box.center[axis] + direction and
+                        checked_box.center[other_axis] == box.center[other_axis]):
+                    #Check if a blue or white box is directly next to the box we are checking along the given
+                    #axis and direction, which is either 1 or -1
+                    if box.color == "white":
+                        # If the neighboring box is white, return false
+                        return False
+                    else:
+                        # If the neighboring box is blue, check if it has a white box in the next space over
+                        return check_white_box_collision(world, box, axis, direction)
+    return True
+
+
+
 
 def pan_start(world: World, x, y):
     if not world.is_clicking_interactable:
@@ -510,12 +557,11 @@ def pan_end(world: World):
 
 def create_World() -> World:
     red_boxes = [create_box([1,1,1], [0,0,0], "red"),
-                 create_box([1,1,1], [-3,0,1], "red")]
-    white_boxes = [create_box([1, 1, 1], [3, 0, 3], "white")]
-    blue_boxes = [create_box([1,1,1], [1, 0, 0], "blue"),
-                  create_box([1,1,1], [0,0,1], "blue"),
-                  create_box([1,1,1], [-1,0,0], "blue"),
-                  create_box([1,1,1], [0,0,-1], "blue")]
+                 create_box([1,1,1], [-2,0,2], "red")]
+    white_boxes = [#create_box([1,1,1], [-3, 0, 0], "white")
+                   ]
+    blue_boxes = [create_box([1, 1, 1], [-1, 0, 0], "blue"),
+                  create_box([1, 1, 1], [-2, 0,0], "blue")]
     green_boxes = [create_box([1,1,1], [-3, 0, -3], "green")]
     base = create_box([9, 1, 9], [0, 1, 0], "white")
 
