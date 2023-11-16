@@ -33,6 +33,8 @@ some sort of collision system for the 3d objects
 - [x] Red and blue boxes can be stopped by white boxes blocking them
 - [x] Blue boxes can detect a level completion when they contact green boxes
 
+Milestone 2: https://youtu.be/sCeHHbo-zNE
+
 Phase 3 task list:
 - [ ] System for creating levels easily
 - [ ] Actual creation of 10 or so levels
