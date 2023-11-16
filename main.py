@@ -286,13 +286,14 @@ def update_boxes(world: World):
     directions = [True, True, True]
 
     if world.scaled_up_red_box:
-        directions[0] = (check_white_box_collision(world, world.scaled_up_red_box, 0, 1) and
-                         check_white_box_collision(world, world.scaled_up_red_box, 0, -1))
-        directions[2] = (check_white_box_collision(world, world.scaled_up_red_box, 2, 1) and
-                         check_white_box_collision(world, world.scaled_up_red_box, 2, -1))
-    print("")
+        directions[0] = (check_box_collision(world, world.scaled_up_red_box, 0, 1) and
+                         check_box_collision(world, world.scaled_up_red_box, 0, -1))
+        directions[2] = (check_box_collision(world, world.scaled_up_red_box, 2, 1) and
+                         check_box_collision(world, world.scaled_up_red_box, 2, -1))
+
     scale_red_box(world, directions)
-    move_blue_box(world)
+    if(world.scaled_up_red_box):
+        move_blue_box(world, world.scaled_up_red_box)
 
 
 def calculate_render_order(world: World):
@@ -451,57 +452,71 @@ def scale_red_box(world: World, directions: list[bool]):
                     scale_down_speed[2] = -SCALE_SPEED
                 scale_points(world.previously_scaled_up_red_box, scale_down_speed)
 
-def move_blue_box(world: World):
+def move_blue_box(world: World, pushing_box: Box):
 
-    if world.scaled_up_red_box:
-        for blue_box in world.boxes[2]:
-            # Check if there is a growing red box on each side of the blue box, and change movement
-            # vector in the opposite direction of the growing red box if there is
+    for blue_box in world.boxes[2]: # 2 is blue boxes
+        if not blue_box.is_moving:
+            if pushing_box.color == "red":
 
-            if world.scaled_up_red_box.center[0] == blue_box.center[0] and world.scaled_up_red_box.size[2] > 1.0:
-                if world.scaled_up_red_box.center[2] == blue_box.center[2] - 1:
-                    blue_box.is_moving = True
-                    blue_box.movement[2] = SCALE_SPEED/2
-                elif world.scaled_up_red_box.center[2] == blue_box.center[2] + 1:
-                    blue_box.is_moving = True
-                    blue_box.movement[2] = -SCALE_SPEED/2
+                if pushing_box.center[0] == blue_box.center[0] and pushing_box.size[2] > 1.0:
+                    if pushing_box.center[2] == blue_box.center[2] - 1:
+                        blue_box.is_moving = True
+                        blue_box.movement[2] = SCALE_SPEED/2
+                    elif pushing_box.center[2] == blue_box.center[2] + 1:
+                        blue_box.is_moving = True
+                        blue_box.movement[2] = -SCALE_SPEED/2
 
-            elif world.scaled_up_red_box.center[2] == blue_box.center[2] and world.scaled_up_red_box.size[0] > 1.0:
-                if world.scaled_up_red_box.center[0] == blue_box.center[0] - 1:
-                    blue_box.is_moving = True
-                    blue_box.movement[0] = SCALE_SPEED/2
-                elif world.scaled_up_red_box.center[0] == blue_box.center[0] + 1:
-                    blue_box.is_moving = True
-                    blue_box.movement[0] = -SCALE_SPEED/2
+                elif pushing_box.center[2] == blue_box.center[2] and pushing_box.size[0] > 1.0:
+                    if pushing_box.center[0] == blue_box.center[0] - 1:
+                        blue_box.is_moving = True
+                        blue_box.movement[0] = SCALE_SPEED/2
+                    elif pushing_box.center[0] == blue_box.center[0] + 1:
+                        blue_box.is_moving = True
+                        blue_box.movement[0] = -SCALE_SPEED/2
 
-            # Update position based on movement vector
+            # elif pushing_box.color == "blue":
+            #     if pushing_box.center[0] == blue_box.center[0]:
+            #         if (pushing_box.center[2] == blue_box.center[2] - 1 or
+            #                 pushing_box.center[2] == blue_box.center[2] + 1):
+            #             blue_box.is_moving = True
+            #             blue_box.movement = pushing_box.movement
+            #     elif pushing_box.center[2] == blue_box.center[2]:
+            #         if (pushing_box.center[0] == blue_box.center[0] - 1 or
+            #                 pushing_box.center[0] == blue_box.center[0] + 1):
+            #             blue_box.is_moving = True
+            #             blue_box.movement = pushing_box.movement
+
             if blue_box.is_moving:
-                blue_box.center[0] += blue_box.movement[0]
-                blue_box.center[2] += blue_box.movement[2]
-                if world.scaled_up_red_box.size[1] >= SCALE_MAX:
-                    blue_box.is_moving = False
-                    blue_box.center[0] = round(blue_box.center[0])
-                    blue_box.center[2] = round(blue_box.center[2])
+                move_blue_box(world, blue_box)
 
-def check_white_box_collision(world: World, checked_box: Box, axis: int, direction: int) -> bool:
+        else:
+            blue_box.center[0] += blue_box.movement[0]
+            blue_box.center[2] += blue_box.movement[2]
+            if pushing_box.size[1] >= SCALE_MAX or (pushing_box.color == "blue" and pushing_box.is_moving == False):
+                blue_box.is_moving = False
+                blue_box.movement = [0, 0, 0]
+                blue_box.center[0] = round(blue_box.center[0])
+                blue_box.center[2] = round(blue_box.center[2])
+
+def check_box_collision(world: World, checked_box: Box, axis: int, direction: int) -> bool:
     # Run through all boxes in the world and filter out any that aren't white or blue
     other_axis = 0
     if axis == 0:
         other_axis = 2
 
     for index, type in enumerate(world.boxes):
-        if index == 1 or index == 2: # 1 is white, 2 is blue
+        if index == 1 or index == 2 or index == 0: # 1 is white, 2 is blue, 0 is red
             for box in type:
                 if (checked_box.center[axis] == box.center[axis] + direction and
                         checked_box.center[other_axis] == box.center[other_axis]):
-                    #Check if a blue or white box is directly next to the box we are checking along the given
+                    #Check if a blue, red,  or white box is directly next to the box we are checking along the given
                     #axis and direction, which is either 1 or -1
-                    if box.color == "white":
-                        # If the neighboring box is white, return false
+                    if box.color == "white" or box.color == "red":
+                        # If the neighboring box is white or red, return false
                         return False
                     else:
                         # If the neighboring box is blue, check if it has a white box in the next space over
-                        return check_white_box_collision(world, box, axis, direction)
+                        return check_box_collision(world, box, axis, direction)
     return True
 
 
@@ -555,14 +570,31 @@ def pan_end(world: World):
 #         j+=1
 #     return(World(base, [red, white, blue, green], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None))
 
+def detect_win(world: World) -> bool:
+    green_boxes_filled = []
+    for green_box in world.boxes[3]: # 3 is green boxes
+        for blue_box in world.boxes[2]: # 3 is blue boxes
+            if blue_box.center == green_box.center:
+                green_boxes_filled.append(True)
+    return len(green_boxes_filled) == len(world.boxes[3])
+
+def end_game():
+    text("white", "you win!", 20, CENTER[0], 10)
+    pause()
+
+
 def create_World() -> World:
     red_boxes = [create_box([1,1,1], [0,0,0], "red"),
-                 create_box([1,1,1], [-2,0,2], "red")]
-    white_boxes = [#create_box([1,1,1], [-3, 0, 0], "white")
+                 create_box([1,1,1], [-1,0,2], "red")]
+    white_boxes = [create_box([1,1,1], [-3, 0, 2], "white")
                    ]
     blue_boxes = [create_box([1, 1, 1], [-1, 0, 0], "blue"),
-                  create_box([1, 1, 1], [-2, 0,0], "blue")]
-    green_boxes = [create_box([1,1,1], [-3, 0, -3], "green")]
+                  create_box([1, 1, 1], [1, 0,0], "blue"),
+                  create_box([1, 1, 1], [0, 0, 1], "blue"),
+                  create_box([1, 1, 1], [0, 0, -1], "blue")
+                  ]
+    green_boxes = [create_box([1,1,1], [-2, 0, 0], "green"),
+                   create_box([1,1,1], [1, 0, 2], "green")]
     base = create_box([9, 1, 9], [0, 1, 0], "white")
 
 
@@ -583,12 +615,15 @@ def create_World() -> World:
     #     # # # # # # # # #""", 9, 9)
 
 
+
 when('starting', create_World)
 
 when('clicking', red_box_interaction)
 
 when('input.mouse.down', pan_start)
 when('input.mouse.up', pan_end)
+
+when(detect_win, end_game)
 
 when('updating', update_boxes)
 start()
