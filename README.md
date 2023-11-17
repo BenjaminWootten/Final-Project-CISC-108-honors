@@ -36,7 +36,7 @@ some sort of collision system for the 3d objects
 Milestone 2: https://youtu.be/sCeHHbo-zNE
 
 Phase 3 task list:
-- [ ] System for creating levels easily
+- [x] System for creating levels easily
 - [ ] Actual creation of 10 or so levels
 - [ ] Main menu
 - [ ] Level select screen
