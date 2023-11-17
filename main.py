@@ -547,34 +547,6 @@ def pan_world(world: World):
 def pan_end(world: World):
     world.is_panning = False
 
-# def create_level(level: str, base_x, base_z) -> World:
-#     # # = empty
-#     # r = red
-#     # w = white
-#     # b = blue
-#     # g = green
-#     base = create_box([base_x, 1, base_z], [0,1,0], "base")
-#     red = []
-#     white = []
-#     blue = []
-#     green = []
-#
-#     i = 0
-#     j = 0
-#     for line in level.strip(" "):
-#         for character in line.strip(" "):
-#             print(character)
-#             if character == "r":
-#                 red.append(create_box([1,1,1], [i-4, 0, j-4], "red"))
-#             elif character == "w":
-#                 white.append(create_box([1,1,1], [i-4, 0, j-4], "white"))
-#             elif character == "b":
-#                 blue.append(create_box([1,1,1], [i-4,0,j-4], "blue"))
-#             elif character == "g":
-#                 green.append(create_box([1,1,1], [i-4,0,j-4], "green"))
-#             i+=1
-#         j+=1
-#     return(World(base, [red, white, blue, green], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None))
 
 def detect_win(world: World) -> bool:
     green_boxes_filled = []
@@ -589,6 +561,32 @@ def end_game():
     text("white", "you win!", 20, CENTER[0], 10)
     pause()
 
+def create_level(level: list[list[str]], base_x, base_z) -> World:
+    #   = empty
+    # r = red
+    # w = white
+    # b = blue
+    # g = green
+    base = create_box([base_x, 1, base_z], [0,1,0], "base")
+    red = []
+    white = []
+    blue = []
+    green = []
+    for i, row in enumerate(reversed(level)):
+        for j, character in enumerate(row):
+            if character == "r":
+                red.append(create_box([1,1,1], [j-m.floor(base_x/2), 0, i-m.floor(base_z/2)],
+                                      "red"))
+            elif character == "w":
+                white.append(create_box([1, 1, 1], [j-m.floor(base_x/2), 0, i-m.floor(base_z/2)],
+                                        "white"))
+            elif character == "b":
+                blue.append(create_box([1, 1, 1], [j-m.floor(base_x/2), 0, i-m.floor(base_z/2)],
+                                       "blue"))
+            elif character == "g":
+                green.append(create_box([1, 1, 1], [j-m.floor(base_x/2), 0, i-m.floor(base_z/2)],
+                                        "green"))
+    return(World(base, [red, white, blue, green], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None, False))
 
 def create_World() -> World:
     red_boxes = [create_box([1,1,1], [0,0,0], "red")
@@ -603,19 +601,20 @@ def create_World() -> World:
 
     set_window_color("black")
 
-    return World(base, [red_boxes, white_boxes, blue_boxes, green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False,
-                 None, None, False)
+    # return World(base, [red_boxes, white_boxes, blue_boxes, green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False,
+    #              None, None, False)
 
-    # return create_level(
-    #     """r # # # # # # # #
-    #     # # # # # # # # #
-    #     # # # # # # # # #
-    #     # # # # # # # # #
-    #     # # # # r # # # #
-    #     # # # # # # # # #
-    #     # # # # # # # # #
-    #     # # # # # # # # #
-    #     # # # # # # # # #""", 9, 9)
+    return create_level([
+        [" ", " ", " ", " ", " ", "w", " ", " ", " "],
+        [" ", " ", " ", " ", " ", "b", "r", " ", " "],
+        [" ", " ", " ", "w", " ", "r", "w", " ", " "],
+        [" ", " ", " ", "r", "b", " ", " ", " ", " "],
+        [" ", " ", " ", "w", " ", "g", " ", " ", " "],
+        [" ", " ", " ", " ", " ", " ", " ", " ", " "],
+        [" ", " ", " ", " ", " ", " ", " ", " ", " "],
+        [" ", " ", " ", " ", " ", " ", " ", " ", " "],
+        [" ", " ", " ", " ", " ", " ", " ", " ", " "]
+    ], 9, 9)
 
 
 
