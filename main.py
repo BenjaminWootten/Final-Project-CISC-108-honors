@@ -28,6 +28,7 @@ class World:
     is_clicking_interactable: bool
     scaled_up_red_box: Box
     previously_scaled_up_red_box: Box
+    is_scaling: bool
 
 
 CENTER = [get_width()/2, get_height()/2]
@@ -196,17 +197,17 @@ def destroy_box(box: Box):
     for face in box.faces:
         destroy(face)
 
-def update_boxes(world: World):
+def draw_boxes(world: World):
     '''
-    This function is run when updating and updates every box in the world. This includes updating size, position,
-    rotation, and projection of all boxes.
+        This function is run when updating and updates every box in the world. This includes updating size, position,
+        rotation, and projection of all boxes.
 
-    Args:
-        world (World): the current world data
+        Args:
+            world (World): the current world data
 
-    Returns:
-        None
-    '''
+        Returns:
+            None
+        '''
     rotation_x_matrix = np.matrix([
         [1, 0, 0],
         [0, m.cos(world.angle[0]), -m.sin(world.angle[0])],
@@ -224,10 +225,6 @@ def update_boxes(world: World):
         [m.sin(world.angle[2]), m.cos(world.angle[2]), 0],
         [0, 0, 1]
     ])
-
-
-    calculate_render_order(world)
-
 
     for box in world.box_render_order:
         # Update each box based on box_render_order
@@ -278,22 +275,28 @@ def update_boxes(world: World):
         for index, projected_point in enumerate(box.projected_points):
             box.vertices[index] = circle("black", 5, projected_point[0], projected_point[1])
 
+def main(world: World):
+
+    calculate_render_order(world)
+
+    draw_boxes(world)
 
     # Rotating boxes with mouse pan
     if world.is_panning:
         pan_world(world)
 
-    directions = [True, True, True]
-
-    if world.scaled_up_red_box:
+    if world.is_scaling:
+        directions = [True, True, True]
         directions[0] = (check_box_collision(world, world.scaled_up_red_box, 0, 1) and
                          check_box_collision(world, world.scaled_up_red_box, 0, -1))
         directions[2] = (check_box_collision(world, world.scaled_up_red_box, 2, 1) and
                          check_box_collision(world, world.scaled_up_red_box, 2, -1))
 
-    scale_red_box(world, directions)
-    if(world.scaled_up_red_box):
+        scale_red_box(world, directions)
+
         move_blue_box(world, world.scaled_up_red_box)
+
+
 
 
 def calculate_render_order(world: World):
@@ -416,6 +419,7 @@ def red_box_interaction(world: World):
             if closest_clicked.size[1] == 1.0 and closest_clicked != world.scaled_up_red_box:
                 world.previously_scaled_up_red_box = world.scaled_up_red_box
                 world.scaled_up_red_box = closest_clicked
+                world.is_scaling = True
             else:
                 world.is_clicking_interactable = False
 
@@ -451,6 +455,8 @@ def scale_red_box(world: World, directions: list[bool]):
                 if world.previously_scaled_up_red_box.size[2] > 1.0:
                     scale_down_speed[2] = -SCALE_SPEED
                 scale_points(world.previously_scaled_up_red_box, scale_down_speed)
+        else:
+            world.is_scaling = False
 
 def move_blue_box(world: World, pushing_box: Box):
 
@@ -576,6 +582,7 @@ def detect_win(world: World) -> bool:
         for blue_box in world.boxes[2]: # 3 is blue boxes
             if blue_box.center == green_box.center:
                 green_boxes_filled.append(True)
+                blue_box.color = "purple"
     return len(green_boxes_filled) == len(world.boxes[3])
 
 def end_game():
@@ -584,24 +591,20 @@ def end_game():
 
 
 def create_World() -> World:
-    red_boxes = [create_box([1,1,1], [0,0,0], "red"),
-                 create_box([1,1,1], [-1,0,2], "red")]
-    white_boxes = [create_box([1,1,1], [-3, 0, 2], "white")
+    red_boxes = [create_box([1,1,1], [0,0,0], "red")
+                 ]
+    white_boxes = [create_box([1,1,1], [-1, 0, 3], "white")
                    ]
-    blue_boxes = [create_box([1, 1, 1], [-1, 0, 0], "blue"),
-                  create_box([1, 1, 1], [1, 0,0], "blue"),
-                  create_box([1, 1, 1], [0, 0, 1], "blue"),
-                  create_box([1, 1, 1], [0, 0, -1], "blue")
+    blue_boxes = [create_box([1, 1, 1], [-1, 0, 0], "blue")
                   ]
-    green_boxes = [create_box([1,1,1], [-2, 0, 0], "green"),
-                   create_box([1,1,1], [1, 0, 2], "green")]
+    green_boxes = [create_box([1,1,1], [-2, 0, 0], "green")]
     base = create_box([9, 1, 9], [0, 1, 0], "white")
 
 
     set_window_color("black")
 
     return World(base, [red_boxes, white_boxes, blue_boxes, green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False,
-                 None, None)
+                 None, None, False)
 
     # return create_level(
     #     """r # # # # # # # #
@@ -625,5 +628,5 @@ when('input.mouse.up', pan_end)
 
 when(detect_win, end_game)
 
-when('updating', update_boxes)
+when('updating', main)
 start()
