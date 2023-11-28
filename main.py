@@ -529,7 +529,6 @@ def check_box_collision(world: World, checked_box: Box, axis: int, direction: in
 
 
 
-
 def pan_start(world: World, x, y):
     if not world.is_clicking_interactable:
         world.pan_pos = [x, y]
