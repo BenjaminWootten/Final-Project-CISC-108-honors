@@ -559,11 +559,13 @@ def detect_win(world: World) -> bool:
                 blue_box.color = "purple"
     return len(green_boxes_filled) == len(world.boxes[3])
 
-def end_level():
-    text("white", "you win!", 20, CENTER[0], 10)
+def end_level(world: World):
     global level_number
     level_number += 1
-    change_level(level_number)
+    for box in world.box_render_order:
+        destroy_box(box)
+    start()
+
 
 def create_level(level: list[list[str]], base_x, base_z) -> World:
     #   = empty
