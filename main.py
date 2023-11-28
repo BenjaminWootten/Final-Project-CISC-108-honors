@@ -2,6 +2,7 @@ from designer import *
 import numpy as np
 import math as m
 from dataclasses import dataclass
+from levels import change_level
 
 @dataclass
 class Box:
@@ -30,6 +31,7 @@ class World:
     previously_scaled_up_red_box: Box
     is_scaling: bool
 
+level_number = 0
 
 CENTER = [get_width()/2, get_height()/2]
 SCALE = 50.0 # Scale for rendering
@@ -414,7 +416,7 @@ def red_box_interaction(world: World):
                     closest_clicked = box_clicked
 
         # Checks if the closest clicked box is red
-        if closest_clicked.color == "red":
+        if closest_clicked.color == "red" and not world.is_scaling:
             world.is_clicking_interactable = True
             if closest_clicked.size[1] == 1.0 and closest_clicked != world.scaled_up_red_box:
                 world.previously_scaled_up_red_box = world.scaled_up_red_box
@@ -551,15 +553,17 @@ def pan_end(world: World):
 def detect_win(world: World) -> bool:
     green_boxes_filled = []
     for green_box in world.boxes[3]: # 3 is green boxes
-        for blue_box in world.boxes[2]: # 3 is blue boxes
+        for blue_box in world.boxes[2]: # 2 is blue boxes
             if blue_box.center == green_box.center:
                 green_boxes_filled.append(True)
                 blue_box.color = "purple"
     return len(green_boxes_filled) == len(world.boxes[3])
 
-def end_game():
+def end_level():
     text("white", "you win!", 20, CENTER[0], 10)
-    pause()
+    global level_number
+    level_number += 1
+    change_level(level_number)
 
 def create_level(level: list[list[str]], base_x, base_z) -> World:
     #   = empty
@@ -586,46 +590,24 @@ def create_level(level: list[list[str]], base_x, base_z) -> World:
             elif character == "g":
                 green.append(create_box([1, 1, 1], [j-m.floor(base_x/2), 0, i-m.floor(base_z/2)],
                                         "green"))
-    return(World(base, [red, white, blue, green], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None, False))
-
-def create_World() -> World:
-    red_boxes = [create_box([1,1,1], [0,0,0], "red")
-                 ]
-    white_boxes = [create_box([1,1,1], [-1, 0, 3], "white")
-                   ]
-    blue_boxes = [create_box([1, 1, 1], [-1, 0, 0], "blue")
-                  ]
-    green_boxes = [create_box([1,1,1], [-2, 0, 0], "green")]
-    base = create_box([9, 1, 9], [0, 1, 0], "white")
+    return World(base, [red, white, blue, green], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None, False)
 
 
+def create_world() -> World:
     set_window_color("black")
 
-    # return World(base, [red_boxes, white_boxes, blue_boxes, green_boxes], [], [0.3, 0.3, 0.0], [0, 0], False, False,
-    #              None, None, False)
-
-    return create_level([
-        [" ", " ", " ", " ", " ", "w", " ", " ", " "],
-        [" ", " ", " ", " ", " ", "b", "r", " ", " "],
-        [" ", " ", " ", "w", " ", "r", "w", " ", " "],
-        [" ", " ", " ", "r", "b", " ", " ", " ", " "],
-        [" ", " ", " ", "w", " ", "g", " ", " ", " "],
-        [" ", " ", " ", " ", " ", " ", " ", " ", " "],
-        [" ", " ", " ", " ", " ", " ", " ", " ", " "],
-        [" ", " ", " ", " ", " ", " ", " ", " ", " "],
-        [" ", " ", " ", " ", " ", " ", " ", " ", " "]
-    ], 9, 9)
+    return create_level(change_level(level_number), 9, 9)
 
 
 
-when('starting', create_World)
+when('starting', create_world)
 
 when('clicking', red_box_interaction)
 
 when('input.mouse.down', pan_start)
 when('input.mouse.up', pan_end)
 
-when(detect_win, end_game)
+when(detect_win, end_level)
 
 when('updating', main)
 start()
