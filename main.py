@@ -31,7 +31,7 @@ class World:
     previously_scaled_up_red_box: Box
     is_scaling: bool
 
-level_number = 0
+level_number = 4
 
 CENTER = [get_width()/2, get_height()/2]
 SCALE = 50.0 # Scale for rendering
@@ -482,17 +482,17 @@ def move_blue_box(world: World, pushing_box: Box):
                         blue_box.is_moving = True
                         blue_box.movement[0] = -SCALE_SPEED/2
 
-            # elif pushing_box.color == "blue":
-            #     if pushing_box.center[0] == blue_box.center[0]:
-            #         if (pushing_box.center[2] == blue_box.center[2] - 1 or
-            #                 pushing_box.center[2] == blue_box.center[2] + 1):
-            #             blue_box.is_moving = True
-            #             blue_box.movement = pushing_box.movement
-            #     elif pushing_box.center[2] == blue_box.center[2]:
-            #         if (pushing_box.center[0] == blue_box.center[0] - 1 or
-            #                 pushing_box.center[0] == blue_box.center[0] + 1):
-            #             blue_box.is_moving = True
-            #             blue_box.movement = pushing_box.movement
+            elif pushing_box.color == "blue":
+                if round(pushing_box.center[0]) == blue_box.center[0]:
+                    if (round(pushing_box.center[2]) == blue_box.center[2] - 1 or
+                            round(pushing_box.center[2]) == blue_box.center[2] + 1):
+                        blue_box.is_moving = True
+                        blue_box.movement[2] = pushing_box.movement[2]
+                if round(pushing_box.center[2]) == blue_box.center[2]:
+                    if (round(pushing_box.center[0]) == blue_box.center[0] - 1 or
+                            round(pushing_box.center[0]) == blue_box.center[0] + 1):
+                        blue_box.is_moving = True
+                        blue_box.movement[0] = pushing_box.movement[0]
 
             if blue_box.is_moving:
                 move_blue_box(world, blue_box)
