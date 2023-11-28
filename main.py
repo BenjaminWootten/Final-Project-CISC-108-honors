@@ -31,7 +31,7 @@ class World:
     previously_scaled_up_red_box: Box
     is_scaling: bool
 
-level_number = 4
+level_number = 0
 
 CENTER = [get_width()/2, get_height()/2]
 SCALE = 50.0 # Scale for rendering
