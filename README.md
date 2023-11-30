@@ -41,7 +41,7 @@ Phase 3 task list:
 - [x] Reset level button
 - [x] Main menu
 - [x] Level select screen
-- [ ] Track completed and uncompleted levels on level select screen
+- [x] Track completed and uncompleted levels on level select screen
 - [x] Return to level select upon completing a level
 - [ ] Victory screen upon all levels being completed
 
