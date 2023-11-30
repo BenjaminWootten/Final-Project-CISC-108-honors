@@ -43,7 +43,7 @@ Phase 3 task list:
 - [x] Level select screen
 - [x] Track completed and uncompleted levels on level select screen
 - [x] Return to level select upon completing a level
-- [ ] Victory screen upon all levels being completed
+- [x] Victory screen upon all levels being completed
 - [ ] Game instructions on main menu
 
 Extra task list:
