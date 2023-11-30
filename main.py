@@ -24,6 +24,7 @@ class Button:
     background: DesignerObject
     border: DesignerObject
     text: DesignerObject
+    color: str
 
 @dataclass
 class World:
@@ -55,9 +56,6 @@ class LevelMenu:
     level_buttons: list[Button]
     back_button: Button
 
-# Global variables persist between world resets when loading levels
-level_number = 8
-
 # Constants
 TOTAL_LEVELS = 10
 CENTER = [get_width()/2, get_height()/2]
@@ -70,21 +68,30 @@ PROJECTION_MATRIX = np.matrix([
     [0, 1, 0]
 ])
 
-def create_button(message: str, x: int, y: int) -> Button:
+# Global variables persist between world resets when loading levels
+level_number = 0
+completed_levels = []
+for i in range(0, TOTAL_LEVELS):
+    completed_levels.append(False)
+
+def create_button(message: str, x: int, y: int, color: str) -> Button:
     x_padding = 4
     y_padding = 2
     button_text = text("black", message, 20, x, y)
     border = rectangle("white", button_text.width + 2 * x_padding, button_text.height + 2 * y_padding, x, y)
-    background = rectangle("gray", button_text.width + x_padding, button_text.height + y_padding, x, y)
+    background = rectangle(color, button_text.width + x_padding, button_text.height + y_padding, x, y)
     button_text = text("black", message, 20, x, y)
-    return Button(background, border, button_text)
+    return Button(background, border, button_text, color)
 
 def button_hover(button: Button) -> bool:
     if colliding_with_mouse(button.border):
-        button.background.color = "gray"
+        button.background.color = button.color
         return True
     else:
-        button.background.color = "darkgray"
+        if button.color == "gray":
+            button.background.color = "darkgray"
+        else:
+            button.background.color = "lightgreen"
         return False
 
 def check_game_button_press(world: World):
@@ -611,9 +618,9 @@ def detect_win(world: World) -> bool:
 
 def end_level(world: World):
     if detect_win(world):
-        global level_number
-        level_number += 1
-        change_scene('game')
+        global completed_levels
+        completed_levels[level_number] = True
+        change_scene('level_menu')
 
 def create_level(level: list[list[str]], base_x, base_z) -> World:
     #   = empty
@@ -641,8 +648,8 @@ def create_level(level: list[list[str]], base_x, base_z) -> World:
                 green.append(create_box([1, 1, 1], [j-m.floor(base_x/2), 0, i-m.floor(base_z/2)],
                                         "green"))
     return World(base, [red, white, blue, green], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None, False, [
-        create_button("Reset Level", get_width()-50, get_height()-20),
-        create_button("Level Select", 50, get_height()-20)
+        create_button("Reset Level", get_width()-50, get_height()-20, "gray"),
+        create_button("Level Select", 50, get_height()-20, "gray")
     ])
 
 def create_world() -> World:
@@ -662,7 +669,7 @@ def create_main_menu() -> MainMenu:
     title_background = rectangle("lightslategray", title.width + x_padding, title.height + y_padding, CENTER[0],
                                  CENTER[1]/3)
     title = text("black", "Growth Matrix", 50, CENTER[0], CENTER[1] / 3)
-    play_button = create_button("   Play   ", CENTER[0], CENTER[1]*1.25)
+    play_button = create_button("   Play   ", CENTER[0], CENTER[1]*1.25, "gray")
     return MainMenu(title, title_background, title_border, play_button)
 
 def main_menu_button_hover(menu: MainMenu):
@@ -678,9 +685,13 @@ def create_level_menu() -> LevelMenu:
 
     level_buttons = []
     for i in range(0, TOTAL_LEVELS):
-        level_buttons.append(create_button("  " + str(i+1) + "  ", i * 50 + 100, CENTER[1]))
+        if completed_levels[i]:
+            color = "green"
+        else:
+            color = "gray"
+        level_buttons.append(create_button("  " + str(i+1) + "  ", i * 50 + 100, CENTER[1], color))
 
-    back_button = create_button("   back   ", 50, get_height()-20)
+    back_button = create_button("   back   ", 50, get_height()-20, "gray")
 
     title = text("black", " Levels ", 40, CENTER[0], CENTER[1] / 2)
     title_border = rectangle("white", title.width + 2 * x_padding, title.height + 2 * y_padding, CENTER[0],
