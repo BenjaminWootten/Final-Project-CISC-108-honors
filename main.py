@@ -17,6 +17,11 @@ class Box:
     is_moving: bool
     movement: list[float] # [x,y,z]
 
+@dataclass
+class Button:
+    background: DesignerObject
+    border: DesignerObject
+    text: DesignerObject
 
 @dataclass
 class World:
@@ -30,19 +35,55 @@ class World:
     scaled_up_red_box: Box
     previously_scaled_up_red_box: Box
     is_scaling: bool
+    buttons: list[Button]
 
 level_number = 0
+reset = False
 
 CENTER = [get_width()/2, get_height()/2]
 SCALE = 50.0 # Scale for rendering
 SCALE_MAX = 3.0 # Max size of red boxes
-SCALE_SPEED = 0.05 # Scale speed of red boxes
+SCALE_SPEED = 0.1 # Scale speed of red boxes
 
 PROJECTION_MATRIX = np.matrix([
     [1, 0, 0],
     [0, 1, 0]
 ])
 
+def create_button(message: str, x: int, y: int) -> Button:
+    x_padding = 4
+    y_padding = 2
+    button_text = text("black", message, 20, x, y)
+    border = rectangle("white", button_text.width + 2 * x_padding, button_text.height + 2 * y_padding, x, y)
+    background = rectangle("gray", button_text.width + x_padding, button_text.height + y_padding, x, y)
+    button_text = text("black", message, 20, x, y)
+    return Button(background, border, button_text)
+
+def button_hover(button: Button) -> bool:
+    if colliding_with_mouse(button.border):
+        button.background.color = "darkgray"
+        return True
+    else:
+        button.background.color = "gray"
+        return False
+
+def check_button_press(world: World):
+    for button in world.buttons:
+        if button_hover(button):
+
+                if button.text.x < CENTER[0]:
+                    # Menu Button
+                    print("main menu coming soontm")
+                else:
+                    # Reset Button
+                    global reset
+                    if not reset:
+                        reset = True
+                        for box in world.box_render_order:
+                            destroy_box(box)
+                        start()
+                    else:
+                        reset = False
 
 def generate_points(size: list[float], position: list[float]) -> list[[]]:
     '''
@@ -199,93 +240,94 @@ def destroy_box(box: Box):
     for face in box.faces:
         destroy(face)
 
-def draw_boxes(world: World):
+def draw_box(angle: list[float], box: Box):
     '''
-        This function is run when updating and updates every box in the world. This includes updating size, position,
-        rotation, and projection of all boxes.
+        This function updated the given box based on new size, position, and world rotation.
 
         Args:
-            world (World): the current world data
+            angle (list[float]): the current x, y, and z angle of all objects in the world
+            box (Box): the box to be updated
 
         Returns:
             None
         '''
     rotation_x_matrix = np.matrix([
         [1, 0, 0],
-        [0, m.cos(world.angle[0]), -m.sin(world.angle[0])],
-        [0, m.sin(world.angle[0]), m.cos(world.angle[0])]
+        [0, m.cos(angle[0]), -m.sin(angle[0])],
+        [0, m.sin(angle[0]), m.cos(angle[0])]
     ])
 
     rotation_y_matrix = np.matrix([
-        [m.cos(world.angle[1]), 0, m.sin(world.angle[1])],
+        [m.cos(angle[1]), 0, m.sin(angle[1])],
         [0, 1, 0],
-        [-m.sin(world.angle[1]), 0, m.cos(world.angle[1])]
+        [-m.sin(angle[1]), 0, m.cos(angle[1])]
     ])
 
     rotation_z_matrix = np.matrix([
-        [m.cos(world.angle[2]), -m.sin(world.angle[2]), 0],
-        [m.sin(world.angle[2]), m.cos(world.angle[2]), 0],
+        [m.cos(angle[2]), -m.sin(angle[2]), 0],
+        [m.sin(angle[2]), m.cos(angle[2]), 0],
         [0, 0, 1]
     ])
 
-    for box in world.box_render_order:
-        # Update each box based on box_render_order
+    destroy_box(box)
 
-        destroy_box(box)
+    box.points.clear()
+    box.points = generate_points(box.size, box.center)
 
-        box.points.clear()
-        box.points = generate_points(box.size, box.center)
+    # Calculating rotation and projection
+    for index, point in enumerate(box.points):
+        # @ is the matrix multiplication operator
+        # Use transpose to change point from 1x3 to 3x1 matrix to make multiplication with 2d matrix compatible
 
-        # Calculating rotation and projection
-        for index, point in enumerate(box.points):
-            # @ is the matrix multiplication operator
-            # Use transpose to change point from 1x3 to 3x1 matrix to make multiplication with 2d matrix compatible
+        # For each 3d coordinate, multiply by rotation_z to rotate points about the z axis
+        rotated2d = rotation_x_matrix @ point.transpose()
+        rotated2d = rotation_y_matrix @ rotated2d
+        rotated2d = rotation_z_matrix @ rotated2d
+        # For each 3d coordinate, multiply by projection_matrix to convert to 2d coordinate
+        projected2d = PROJECTION_MATRIX @ rotated2d
 
-            # For each 3d coordinate, multiply by rotation_z to rotate points about the z axis
-            rotated2d = rotation_x_matrix @ point.transpose()
-            rotated2d = rotation_y_matrix @ rotated2d
-            rotated2d = rotation_z_matrix @ rotated2d
-            # For each 3d coordinate, multiply by projection_matrix to convert to 2d coordinate
-            projected2d = PROJECTION_MATRIX @ rotated2d
+        # Set projected x and y values for each coordinate
+        x = projected2d[0, 0] * SCALE + CENTER[0]
+        y = projected2d[1, 0] * SCALE + CENTER[1]
 
-            # Set projected x and y values for each coordinate
-            x = projected2d[0, 0] * SCALE + CENTER[0]
-            y = projected2d[1, 0] * SCALE + CENTER[1]
+        # Add x and y values to list of projected points
+        box.projected_points[index] = [x, y]
 
-            # Add x and y values to list of projected points
-            box.projected_points[index] = [x, y]
-
-            # Move corresponding vertices to newly calculated positions
-            box.vertices[index].x = x
-            box.vertices[index].y = y
+        # Move corresponding vertices to newly calculated positions
+        box.vertices[index].x = x
+        box.vertices[index].y = y
 
 
-        # Reloading box geometry
-        # Generates 6 new faces
-        box.faces[0] = create_face(box.color, 0, 1, 2, 3, box.projected_points)
-        box.faces[1] = create_face(box.color, 4, 5, 6, 7, box.projected_points)
-        for p in range(4):
-            box.faces[p + 2] = create_face(box.color, p, (p + 1) % 4, (p + 1) % 4 + 4, p + 4, box.projected_points)\
+    # Reloading box geometry
+    # Generates 6 new faces
+    box.faces[0] = create_face(box.color, 0, 1, 2, 3, box.projected_points)
+    box.faces[1] = create_face(box.color, 4, 5, 6, 7, box.projected_points)
+    for p in range(4):
+        box.faces[p + 2] = create_face(box.color, p, (p + 1) % 4, (p + 1) % 4 + 4, p + 4, box.projected_points)\
 
-        # Generates 12 new lines
-        for p in range(4):
-            box.lines[p] = create_line(p, (p + 1) % 4, box.projected_points)
-            box.lines[p + 4] = create_line(p + 4, (p + 1) % 4 + 4, box.projected_points)
-            box.lines[p + 8] = create_line(p, p + 4, box.projected_points)
+    # Generates 12 new lines
+    for p in range(4):
+        box.lines[p] = create_line(p, (p + 1) % 4, box.projected_points)
+        box.lines[p + 4] = create_line(p + 4, (p + 1) % 4 + 4, box.projected_points)
+        box.lines[p + 8] = create_line(p, p + 4, box.projected_points)
 
-        # Generates 8 new vertices
-        for index, projected_point in enumerate(box.projected_points):
-            box.vertices[index] = circle("black", 5, projected_point[0], projected_point[1])
+    # Generates 8 new vertices
+    for index, projected_point in enumerate(box.projected_points):
+        box.vertices[index] = circle("black", 5, projected_point[0], projected_point[1])
 
 def main(world: World):
 
     calculate_render_order(world)
 
-    draw_boxes(world)
+
 
     # Rotating boxes with mouse pan
     if world.is_panning:
         pan_world(world)
+
+    #all boxes while panning
+    for box in world.box_render_order:
+        draw_box(world.angle, box)
 
     if world.is_scaling:
         directions = [True, True, True]
@@ -297,6 +339,9 @@ def main(world: World):
         scale_red_box(world, directions)
 
         move_blue_box(world, world.scaled_up_red_box)
+
+    for button in world.buttons:
+        button_hover(button)
 
 
 
@@ -432,11 +477,9 @@ def red_box_interaction(world: World):
 
 def scale_red_box(world: World, directions: list[bool]):
 
-    scale_speed = [0,0,0]
+    scale_speed = [0,SCALE_SPEED,0]
     if directions[0]:
         scale_speed[0] = SCALE_SPEED
-    if directions[1]:
-        scale_speed[1] = SCALE_SPEED
     if directions[2]:
         scale_speed[2] = SCALE_SPEED
 
@@ -464,6 +507,7 @@ def move_blue_box(world: World, pushing_box: Box):
 
     for blue_box in world.boxes[2]: # 2 is blue boxes
         if not blue_box.is_moving:
+            blue_box.color = "blue"
             if pushing_box.color == "red":
 
                 if pushing_box.center[0] == blue_box.center[0] and pushing_box.size[2] > 1.0:
@@ -556,6 +600,7 @@ def detect_win(world: World) -> bool:
             if blue_box.center == green_box.center:
                 green_boxes_filled.append(True)
                 blue_box.color = "purple"
+
     return len(green_boxes_filled) == len(world.boxes[3])
 
 def end_level(world: World):
@@ -591,7 +636,10 @@ def create_level(level: list[list[str]], base_x, base_z) -> World:
             elif character == "g":
                 green.append(create_box([1, 1, 1], [j-m.floor(base_x/2), 0, i-m.floor(base_z/2)],
                                         "green"))
-    return World(base, [red, white, blue, green], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None, False)
+    return World(base, [red, white, blue, green], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None, False, [
+        create_button("Reset Level", get_width()-50, get_height()-20),
+        create_button("Main Menu", 50, get_height()-20)
+    ])
 
 
 def create_world() -> World:
@@ -604,6 +652,8 @@ def create_world() -> World:
 when('starting', create_world)
 
 when('clicking', red_box_interaction)
+
+when('input.mouse.down', check_button_press)
 
 when('input.mouse.down', pan_start)
 when('input.mouse.up', pan_end)
