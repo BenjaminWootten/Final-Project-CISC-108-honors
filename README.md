@@ -37,7 +37,8 @@ Milestone 2: https://youtu.be/sCeHHbo-zNE
 
 Phase 3 task list:
 - [x] System for creating levels easily
-- [ ] Actual creation of 10 or so levels
+- [x] Actual creation of 10 or so levels
+- [x] Reset level button
 - [ ] Main menu
 - [ ] Level select screen
 - [ ] Track completed and uncompleted levels on level select screen
