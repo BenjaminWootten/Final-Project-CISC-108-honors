@@ -39,10 +39,10 @@ Phase 3 task list:
 - [x] System for creating levels easily
 - [x] Actual creation of 10 or so levels
 - [x] Reset level button
-- [ ] Main menu
-- [ ] Level select screen
+- [x] Main menu
+- [x] Level select screen
 - [ ] Track completed and uncompleted levels on level select screen
-- [ ] Return to level select upon completing a level
+- [x] Return to level select upon completing a level
 - [ ] Victory screen upon all levels being completed
 
 Extra task list:
