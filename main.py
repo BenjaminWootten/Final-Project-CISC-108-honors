@@ -6,6 +6,7 @@ from levels import change_level
 
 @dataclass
 class Box:
+    # Represents a box in 3d space, comprised of both data and DesignerObjects
     color: str
     size: list[float] # [x,y,z]
     center: list[float] # [x,y,z]
@@ -19,12 +20,14 @@ class Box:
 
 @dataclass
 class Button:
+    # A button the player can click to navigate the menus
     background: DesignerObject
     border: DesignerObject
     text: DesignerObject
 
 @dataclass
 class World:
+    # Contains all information about the 3d world at a given time
     base: Box
     boxes: list[list[Box]] # [[Red], [White], [Blue], [Green]]
     box_render_order: list[Box]
@@ -37,9 +40,17 @@ class World:
     is_scaling: bool
     buttons: list[Button]
 
-level_number = 0
-reset = False
+@dataclass
+class MainMenu:
+    title: DesignerObject
+    title_background: DesignerObject
+    title_border: DesignerObject
+    button: Button
 
+# Global variables persist between world resets when loading levels
+level_number = 0
+
+# Constants
 CENTER = [get_width()/2, get_height()/2]
 SCALE = 50.0 # Scale for rendering
 SCALE_MAX = 3.0 # Max size of red boxes
@@ -61,29 +72,22 @@ def create_button(message: str, x: int, y: int) -> Button:
 
 def button_hover(button: Button) -> bool:
     if colliding_with_mouse(button.border):
-        button.background.color = "darkgray"
+        button.background.color = "gray"
         return True
     else:
-        button.background.color = "gray"
+        button.background.color = "darkgray"
         return False
 
-def check_button_press(world: World):
+def check_game_button_press(world: World):
     for button in world.buttons:
         if button_hover(button):
 
                 if button.text.x < CENTER[0]:
                     # Menu Button
-                    print("main menu coming soontm")
+                    change_scene('main_menu')
                 else:
                     # Reset Button
-                    global reset
-                    if not reset:
-                        reset = True
-                        for box in world.box_render_order:
-                            destroy_box(box)
-                        start()
-                    else:
-                        reset = False
+                    change_scene('game')
 
 def generate_points(size: list[float], position: list[float]) -> list[[]]:
     '''
@@ -166,7 +170,6 @@ def create_face(color: str, i: int, j: int, k: int, l: int, points: list[[]]) ->
     # Returns a shape of chosen color connecting points at indexes i, j, k, and l in list points
     return shape(color, [points[i][0], points[i][1], points[j][0], points[j][1], points[k][0], points[k][1],
                          points[l][0], points[l][1]], absolute=True, anchor='topleft')
-
 
 def create_box(size: list[float], position: list[float], type: str) -> Box:
     '''
@@ -343,9 +346,6 @@ def main(world: World):
     for button in world.buttons:
         button_hover(button)
 
-
-
-
 def calculate_render_order(world: World):
     '''
     This function orders all boxes in the world in a list based on their position relative to the camera, assuring they
@@ -439,7 +439,6 @@ def calculate_render_order(world: World):
         world.box_render_order.append(world.base)
     else:
         world.box_render_order.insert(0, world.base)
-
 
 def red_box_interaction(world: World):
 
@@ -571,8 +570,6 @@ def check_box_collision(world: World, checked_box: Box, axis: int, direction: in
                         return check_box_collision(world, box, axis, direction)
     return True
 
-
-
 def pan_start(world: World, x, y):
     if not world.is_clicking_interactable:
         world.pan_pos = [x, y]
@@ -592,7 +589,6 @@ def pan_world(world: World):
 def pan_end(world: World):
     world.is_panning = False
 
-
 def detect_win(world: World) -> bool:
     green_boxes_filled = []
     for green_box in world.boxes[3]: # 3 is green boxes
@@ -604,12 +600,12 @@ def detect_win(world: World) -> bool:
     return len(green_boxes_filled) == len(world.boxes[3])
 
 def end_level(world: World):
-    global level_number
-    level_number += 1
-    for box in world.box_render_order:
-        destroy_box(box)
-    start()
-
+    if detect_win(world):
+        global level_number
+        level_number += 1
+        # for box in world.box_render_order:
+        #     destroy_box(box)
+        change_scene('game')
 
 def create_level(level: list[list[str]], base_x, base_z) -> World:
     #   = empty
@@ -641,24 +637,49 @@ def create_level(level: list[list[str]], base_x, base_z) -> World:
         create_button("Main Menu", 50, get_height()-20)
     ])
 
-
 def create_world() -> World:
     set_window_color("black")
 
     return create_level(change_level(level_number), 9, 9)
 
+def create_main_menu() -> MainMenu:
+    set_window_color("black")
+
+    x_padding = 10
+    y_padding = 10
+
+    title = text("black", "Growth Matrix", 50, CENTER[0], CENTER[1]/3)
+    title_border = rectangle("white", title.width + 2*x_padding, title.height + 2*y_padding, CENTER[0],
+                             CENTER[1]/3)
+    title_background = rectangle("lightslategray", title.width + x_padding, title.height + y_padding, CENTER[0],
+                                 CENTER[1]/3)
+    title = text("black", "Growth Matrix", 50, CENTER[0], CENTER[1] / 3)
+    button = create_button("   Play   ", CENTER[0], CENTER[1]*1.25)
+    return MainMenu(title, title_background, title_border, button)
+
+def main_menu_button_hover(menu: MainMenu):
+    return button_hover(menu.button)
+
+def press_play(menu: MainMenu):
+    if button_hover(menu.button):
+        change_scene('game')
 
 
-when('starting', create_world)
 
-when('clicking', red_box_interaction)
+when('starting: main_menu', create_main_menu)
+when('updating: main_menu', main_menu_button_hover)
+when('clicking: main_menu', press_play)
 
-when('input.mouse.down', check_button_press)
+when('starting: game', create_world)
 
-when('input.mouse.down', pan_start)
-when('input.mouse.up', pan_end)
+when('clicking: game', red_box_interaction)
 
-when(detect_win, end_level)
+when('input.mouse.down: game', check_game_button_press)
 
-when('updating', main)
-start()
+when('input.mouse.down: game', pan_start)
+when('input.mouse.up: game', pan_end)
+
+when('updating: game', end_level)
+
+when('updating: game', main)
+start(scene='main_menu')
