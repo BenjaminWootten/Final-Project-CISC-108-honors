@@ -684,21 +684,30 @@ def create_level_menu() -> LevelMenu:
     y_padding = 10
 
     level_buttons = []
+    all_completed = True
     for i in range(0, TOTAL_LEVELS):
         if completed_levels[i]:
             color = "green"
         else:
             color = "gray"
+            all_completed = False
         level_buttons.append(create_button("  " + str(i+1) + "  ", i * 50 + 100, CENTER[1], color))
+
+    if not all_completed:
+        message = " Levels "
+    else:
+        message = "    Congratulations! :)    "
+
+    title = text("black", message, 40, CENTER[0], CENTER[1] / 2)
 
     back_button = create_button("   back   ", 50, get_height()-20, "gray")
 
-    title = text("black", " Levels ", 40, CENTER[0], CENTER[1] / 2)
     title_border = rectangle("white", title.width + 2 * x_padding, title.height + 2 * y_padding, CENTER[0],
                              CENTER[1] / 3)
     title_background = rectangle("lightslategray", title.width + x_padding, title.height + y_padding, CENTER[0],
                                  CENTER[1] / 3)
-    title = text("black", " Levels ", 50, CENTER[0], CENTER[1] / 3)
+
+    title = text("black", message, 50, CENTER[0], CENTER[1] / 3)
 
     return LevelMenu(title, title_border, title_background, level_buttons, back_button)
 
@@ -718,15 +727,18 @@ def level_menu_click(menu: LevelMenu):
             change_scene('game')
 
 
+# Main menu events
 when('starting: main_menu', create_main_menu)
 when('updating: main_menu', main_menu_button_hover)
 when('clicking: main_menu', main_menu_click)
 
+# Level select menu events
 when('starting: level_menu', create_level_menu)
 when('updating: level_menu', level_menu_button_hover)
 when('clicking: level_menu', level_menu_click)
 
 
+# Game events
 when('starting: game', create_world)
 
 when('clicking: game', red_box_interaction)
