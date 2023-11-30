@@ -47,14 +47,23 @@ class MainMenu:
     title_border: DesignerObject
     button: Button
 
+@dataclass
+class LevelMenu:
+    title: DesignerObject
+    title_background: DesignerObject
+    title_border: DesignerObject
+    level_buttons: list[Button]
+    back_button: Button
+
 # Global variables persist between world resets when loading levels
-level_number = 0
+level_number = 8
 
 # Constants
+TOTAL_LEVELS = 10
 CENTER = [get_width()/2, get_height()/2]
 SCALE = 50.0 # Scale for rendering
 SCALE_MAX = 3.0 # Max size of red boxes
-SCALE_SPEED = 0.1 # Scale speed of red boxes
+SCALE_SPEED = 0.2 # Scale speed of red boxes
 
 PROJECTION_MATRIX = np.matrix([
     [1, 0, 0],
@@ -84,7 +93,7 @@ def check_game_button_press(world: World):
 
                 if button.text.x < CENTER[0]:
                     # Menu Button
-                    change_scene('main_menu')
+                    change_scene('level_menu')
                 else:
                     # Reset Button
                     change_scene('game')
@@ -339,9 +348,10 @@ def main(world: World):
         directions[2] = (check_box_collision(world, world.scaled_up_red_box, 2, 1) and
                          check_box_collision(world, world.scaled_up_red_box, 2, -1))
 
+        move_blue_box(world, world.scaled_up_red_box)
+
         scale_red_box(world, directions)
 
-        move_blue_box(world, world.scaled_up_red_box)
 
     for button in world.buttons:
         button_hover(button)
@@ -603,8 +613,6 @@ def end_level(world: World):
     if detect_win(world):
         global level_number
         level_number += 1
-        # for box in world.box_render_order:
-        #     destroy_box(box)
         change_scene('game')
 
 def create_level(level: list[list[str]], base_x, base_z) -> World:
@@ -634,7 +642,7 @@ def create_level(level: list[list[str]], base_x, base_z) -> World:
                                         "green"))
     return World(base, [red, white, blue, green], [], [0.3, 0.3, 0.0], [0, 0], False, False, None, None, False, [
         create_button("Reset Level", get_width()-50, get_height()-20),
-        create_button("Main Menu", 50, get_height()-20)
+        create_button("Level Select", 50, get_height()-20)
     ])
 
 def create_world() -> World:
@@ -654,21 +662,59 @@ def create_main_menu() -> MainMenu:
     title_background = rectangle("lightslategray", title.width + x_padding, title.height + y_padding, CENTER[0],
                                  CENTER[1]/3)
     title = text("black", "Growth Matrix", 50, CENTER[0], CENTER[1] / 3)
-    button = create_button("   Play   ", CENTER[0], CENTER[1]*1.25)
-    return MainMenu(title, title_background, title_border, button)
+    play_button = create_button("   Play   ", CENTER[0], CENTER[1]*1.25)
+    return MainMenu(title, title_background, title_border, play_button)
 
 def main_menu_button_hover(menu: MainMenu):
-    return button_hover(menu.button)
+    button_hover(menu.button)
 
-def press_play(menu: MainMenu):
+def main_menu_click(menu: MainMenu):
     if button_hover(menu.button):
-        change_scene('game')
+        change_scene('level_menu')
 
+def create_level_menu() -> LevelMenu:
+    x_padding = 10
+    y_padding = 10
+
+    level_buttons = []
+    for i in range(0, TOTAL_LEVELS):
+        level_buttons.append(create_button("  " + str(i+1) + "  ", i * 50 + 100, CENTER[1]))
+
+    back_button = create_button("   back   ", 50, get_height()-20)
+
+    title = text("black", " Levels ", 40, CENTER[0], CENTER[1] / 2)
+    title_border = rectangle("white", title.width + 2 * x_padding, title.height + 2 * y_padding, CENTER[0],
+                             CENTER[1] / 3)
+    title_background = rectangle("lightslategray", title.width + x_padding, title.height + y_padding, CENTER[0],
+                                 CENTER[1] / 3)
+    title = text("black", " Levels ", 50, CENTER[0], CENTER[1] / 3)
+
+    return LevelMenu(title, title_border, title_background, level_buttons, back_button)
+
+def level_menu_button_hover(menu: LevelMenu):
+    for button in menu.level_buttons:
+        button_hover(button)
+    button_hover(menu.back_button)
+
+def level_menu_click(menu: LevelMenu):
+    if button_hover(menu.back_button):
+        change_scene('main_menu')
+
+    for i, button in enumerate(menu.level_buttons):
+        if button_hover(button):
+            global level_number
+            level_number = i
+            change_scene('game')
 
 
 when('starting: main_menu', create_main_menu)
 when('updating: main_menu', main_menu_button_hover)
-when('clicking: main_menu', press_play)
+when('clicking: main_menu', main_menu_click)
+
+when('starting: level_menu', create_level_menu)
+when('updating: level_menu', level_menu_button_hover)
+when('clicking: level_menu', level_menu_click)
+
 
 when('starting: game', create_world)
 
@@ -682,4 +728,5 @@ when('input.mouse.up: game', pan_end)
 when('updating: game', end_level)
 
 when('updating: game', main)
+
 start(scene='main_menu')
