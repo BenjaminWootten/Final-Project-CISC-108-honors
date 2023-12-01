@@ -27,6 +27,7 @@ bwootten@udel.edu
 
 Acknowledgements:
 Designer documentation: https://designer-edu.github.io/designer/contents.html
+3D projection method: Pythonista_ on YouTube https://www.youtube.com/watch?v=qw0oY6Ld-L0
 
 Phase 1 task list:
 - [x] The 3d level base can be panned around by the player
