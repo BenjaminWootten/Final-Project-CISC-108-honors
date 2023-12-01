@@ -43,6 +43,7 @@ class World:
 
 @dataclass
 class MainMenu:
+    # Contains Main Menu elements
     title: DesignerObject
     title_background: DesignerObject
     title_border: DesignerObject
@@ -51,6 +52,7 @@ class MainMenu:
 
 @dataclass
 class InstructionsMenu:
+    # Contains Instructions Menu elements
     background: DesignerObject
     border: DesignerObject
     text: list[DesignerObject]
@@ -61,6 +63,7 @@ class InstructionsMenu:
 
 @dataclass
 class LevelMenu:
+    # Contains Levels Menu elements
     title: DesignerObject
     title_background: DesignerObject
     title_border: DesignerObject
@@ -86,6 +89,18 @@ for i in range(0, TOTAL_LEVELS):
     completed_levels.append(False)
 
 def create_button(message: str, x: int, y: int, color: str) -> Button:
+    '''
+    This function creates a button instance to be used in UI elements
+
+    Args:
+        message (str): the text on the button
+        x (int): the x position of the button
+        y (int): the y position of the button
+        color (str): the color of the button
+
+    Returns:
+        Button: a button instance based on the arguments
+    '''
     x_padding = 4
     y_padding = 2
     button_text = text("black", message, 20, x, y)
@@ -95,6 +110,16 @@ def create_button(message: str, x: int, y: int, color: str) -> Button:
     return Button(background, border, button_text, color)
 
 def button_hover(button: Button) -> bool:
+    '''
+    This function checks if a button is being touched by the mouse and changes the color of it accordingly to create a
+    hovering effect. This works for both gray and green buttons
+
+    Args:
+        button (Button): The button to be checked
+
+    Returns:
+        bool: returns True if the mouse is hovering over the button, else returns False
+    '''
     if colliding_with_mouse(button.border):
         button.background.color = button.color
         return True
@@ -106,6 +131,16 @@ def button_hover(button: Button) -> bool:
         return False
 
 def check_game_button_press(world: World):
+    '''
+    This function checks if a button in the game scene has been pressed and changes the scene based on which of the 2
+    buttons (level menu and reset level) has been pressed.
+
+    Args:
+        world (World): the current world data
+
+    Returns:
+        None
+    '''
     for button in world.buttons:
         if button_hover(button):
 
@@ -346,6 +381,16 @@ def draw_box(angle: list[float], box: Box):
         box.vertices[index] = circle("black", 5, projected_point[0], projected_point[1])
 
 def main(world: World):
+    '''
+    This function serves as the main game loops and is run every frame on the game scene. It performs most game
+    operations: rendering, panning, scaling and pushing boxes, and updating button hovering.
+
+    Args:
+        world (World): the current world data
+
+    Returns:
+        None
+    '''
 
     calculate_render_order(world)
 
@@ -355,7 +400,7 @@ def main(world: World):
     if world.is_panning:
         pan_world(world)
 
-    #all boxes while panning
+    # render all boxes
     for box in world.box_render_order:
         draw_box(world.angle, box)
 
@@ -469,7 +514,16 @@ def calculate_render_order(world: World):
         world.box_render_order.insert(0, world.base)
 
 def red_box_interaction(world: World):
+    '''
+    This function is run when clicking and determines if the player has clicked on a red box and if it can be scaled
+    up or not.
 
+    Args:
+        world (World): the current world data
+
+    Returns:
+        None
+    '''
     # Creates a list containing all boxes colliding with the mouse upon clicking
     boxes_clicked = []
     for type in world.boxes:
@@ -503,7 +557,16 @@ def red_box_interaction(world: World):
     boxes_clicked.clear()
 
 def scale_red_box(world: World, directions: list[bool]):
+    '''
+    This function scales up a red box when it is clicked and scales down the previously scaled up red box.
 
+    Args:
+        world (World): the current world data
+        directions (list[bool]): a list of 3 bools indicating if the box can be scaled in the x, y, and z directions
+
+    Returns:
+        None
+    '''
     scale_speed = [0,SCALE_SPEED,0]
     if directions[0]:
         scale_speed[0] = SCALE_SPEED
@@ -531,7 +594,17 @@ def scale_red_box(world: World, directions: list[bool]):
             world.is_scaling = False
 
 def move_blue_box(world: World, pushing_box: Box):
+    '''
+    This function moves a blue box if there is a red box next to it being scaled up or if there is a blue box pushing it
 
+    Args:
+        world (World): the current world data
+        pushing_box (Box): this can be either a growing red box or a moving blue box and the movement behavior changes
+        slightly based on that
+
+    Returns:
+        None
+    '''
     for blue_box in world.boxes[2]: # 2 is blue boxes
         if not blue_box.is_moving:
             blue_box.color = "blue"
@@ -578,6 +651,21 @@ def move_blue_box(world: World, pushing_box: Box):
                 blue_box.center[2] = round(blue_box.center[2])
 
 def check_box_collision(world: World, checked_box: Box, axis: int, direction: int) -> bool:
+    '''
+    This function determines if a red box can be scaled up in the given direction by checking if there is a white or red
+    box adjacent in the given direction, or if there is a blue box it will check the next space via recursion until
+    there is either a white box, red box, or no box.
+
+    Args:
+        world (World): the current world data
+        checked_box (Box): the box having its adjacent collisions being checked
+        axis (int): the axis along which the check is performed, 0 represents x and 2 represents z
+        direction (int): the direction within the axis in which the check is performed, 1 for positive and -1 for
+            negative
+
+    Returns:
+        bool: True if there are no collisions, False if there is one
+    '''
     # Run through all boxes in the world and filter out any that aren't white or blue
     other_axis = 0
     if axis == 0:
@@ -598,12 +686,32 @@ def check_box_collision(world: World, checked_box: Box, axis: int, direction: in
                         return check_box_collision(world, box, axis, direction)
     return True
 
-def pan_start(world: World, x, y):
+def pan_start(world: World, x: float, y: float):
+    '''
+    This function runs when the player does not click a red box and initiates a pan
+
+    Args:
+        world (World): the current world data
+        x (float): the x position of the click
+        y (float): the y position of the click
+
+    Returns:
+        None
+    '''
     if not world.is_clicking_interactable:
         world.pan_pos = [x, y]
         world.is_panning = True
 
 def pan_world(world: World):
+    '''
+    This function pans the world while the player holds down the mouse button
+
+    Args:
+        world (World): the current world data
+
+    Returns:
+        None
+    '''
     world.angle[1] -= (get_mouse_x() - world.pan_pos[0]) / 500
 
     if world.angle[1] % (m.pi * 2) < (m.pi / 2) or world.angle[1] % (m.pi * 2) >= (m.pi * 3 / 2):
@@ -615,9 +723,27 @@ def pan_world(world: World):
     world.pan_pos[1] = get_mouse_y()
 
 def pan_end(world: World):
+    '''
+    This function ends a pan when the player releases the mouse button
+
+    Args:
+        world (World): the current world data
+
+    Returns:
+        None
+    '''
     world.is_panning = False
 
 def detect_win(world: World) -> bool:
+    '''
+    This function checks if all green boxes have been filled with blue boxes and returns the result
+
+    Args:
+        world (World): the current world data
+
+    Returns:
+        bool: returns True if all green boxes are filled, and False otherwise
+    '''
     green_boxes_filled = []
     for green_box in world.boxes[3]: # 3 is green boxes
         for blue_box in world.boxes[2]: # 2 is blue boxes
@@ -628,12 +754,33 @@ def detect_win(world: World) -> bool:
     return len(green_boxes_filled) == len(world.boxes[3])
 
 def end_level(world: World):
+    '''
+    This function ends the level and changes the scene to level_menu if detect_win returns True
+
+    Args:
+        world (World): the current world data
+
+    Returns:
+        None
+    '''
     if detect_win(world):
         global completed_levels
         completed_levels[level_number] = True
         change_scene('level_menu')
 
 def create_level(level: list[list[str]], base_x, base_z) -> World:
+    '''
+    This function converts a 2d list of strings representing boxes in a level into level data and returns a World based
+    on that.
+
+    Args:
+        level (list[list[str]]): the 2d list of strings to be converted to a World
+        base_x (int): the x width of the base of the level
+        base_z (int): the z width of the base of the level
+
+    Returns:
+        World: the created world
+    '''
     #   = empty
     # r = red
     # w = white
@@ -664,11 +811,29 @@ def create_level(level: list[list[str]], base_x, base_z) -> World:
     ])
 
 def create_world() -> World:
+    '''
+    This function creates the world by passing the current level number into the create_level function
+
+    Args:
+        None
+
+    Returns:
+        World: the created world
+    '''
     set_window_color("black")
 
     return create_level(change_level(level_number), 9, 9)
 
 def create_main_menu() -> MainMenu:
+    '''
+    This function creates the main menu
+
+    Args:
+        None
+
+    Returns:
+        MainMenu: the created menu
+    '''
     set_window_color("black")
 
     x_padding = 10
@@ -686,16 +851,43 @@ def create_main_menu() -> MainMenu:
     return MainMenu(title, title_background, title_border, play_button, instructions_button)
 
 def main_menu_button_hover(menu: MainMenu):
+    '''
+    This function updates the color of the buttons on the main menu if the player hovers over them
+
+    Args:
+        menu (MainMenu): the main menu
+
+    Returns:
+        None
+    '''
     button_hover(menu.play_button)
     button_hover(menu.instructions_button)
 
 def main_menu_click(menu: MainMenu):
+    '''
+    This function registers clicks on the main menu buttons and changes to the corresponding menu
+
+    Args:
+        menu (MainMenu): the main menu
+
+    Returns:
+        None
+    '''
     if button_hover(menu.play_button):
         change_scene('level_menu')
     if button_hover(menu.instructions_button):
         push_scene('instructions_menu')
 
 def create_instructions_menu() -> InstructionsMenu:
+    '''
+    This function creates the instructions menu
+
+    Args:
+        None
+
+    Returns:
+        InstructionsMenu: the created instructions menu
+    '''
     width = 600
     height = 250
     x_padding = 10
@@ -729,13 +921,41 @@ def create_instructions_menu() -> InstructionsMenu:
     return InstructionsMenu(background, border, instructions, close_button, title, title_border, title_background)
 
 def instructions_menu_hover(menu: InstructionsMenu):
+    '''
+    This function updates the color of the buttons on the instructions menu if the player hovers over them
+
+    Args:
+        menu (InstructionsMenu): the instructions menu
+
+    Returns:
+        None
+    '''
     button_hover(menu.close_button)
 
 def instructions_menu_click(menu: InstructionsMenu):
+    '''
+    This function registers clicks on the instructions menu buttons and changes to the corresponding menu
+
+    Args:
+        menu (InstructionsMenu): the instructions menu
+
+    Returns:
+        None
+    '''
     if button_hover(menu.close_button):
         pop_scene()
 
 def create_level_menu() -> LevelMenu:
+    '''
+    This function creates the level menu based on the number of levels there are and changes the color of the buttons
+    to green if a level has been completed. It also displays a victory message if all levels have been completed.
+
+    Args:
+        None
+
+    Returns:
+        LevelMenu: the created menu
+    '''
     x_padding = 10
     y_padding = 10
 
@@ -768,11 +988,29 @@ def create_level_menu() -> LevelMenu:
     return LevelMenu(title, title_border, title_background, level_buttons, back_button)
 
 def level_menu_button_hover(menu: LevelMenu):
+    '''
+    This function updates the color of the buttons on the level menu if the player hovers over them
+
+    Args:
+        menu (LevelMenu): the instructions menu
+
+    Returns:
+        None
+    '''
     for button in menu.level_buttons:
         button_hover(button)
     button_hover(menu.back_button)
 
 def level_menu_click(menu: LevelMenu):
+    '''
+    This function registers clicks on the level menu buttons and changes to the corresponding menu or level
+
+    Args:
+        menu (LevelMenu): the instructions menu
+
+    Returns:
+        None
+    '''
     if button_hover(menu.back_button):
         change_scene('main_menu')
 
@@ -803,14 +1041,11 @@ when('clicking: level_menu', level_menu_click)
 when('starting: game', create_world)
 
 when('clicking: game', red_box_interaction)
-
 when('input.mouse.down: game', check_game_button_press)
-
 when('input.mouse.down: game', pan_start)
 when('input.mouse.up: game', pan_end)
 
 when('updating: game', end_level)
-
 when('updating: game', main)
 
 start(scene='main_menu')
