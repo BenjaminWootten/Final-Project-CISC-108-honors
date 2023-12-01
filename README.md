@@ -1,6 +1,8 @@
 Benjamin Wootten
 bwootten@udel.edu
 
+Final Project for CISC 108
+
 Growth Matrix is a 3d puzzle game where the player can rotate the level
 by panning the mouse and can interact with different types of blocks in order to
 move one or more blue blocks to the green goal point.
