@@ -5,11 +5,28 @@ To run this program you need to install the libraries NumPy and Designer
 
 Growth Matrix is a 3d puzzle game about using scalable boxes to push other boxes to the goal.
 
+About:
 In Growth Matrix the player can rotate the level  by panning the mouse and can interact with different types of blocks
 in order to move one or more blue blocks to the green goal point. It has white, immovable blocks that serve as
 obstacles; red, scalable blocks that can be grown and shrunk by the player and used to push the blue blocks around the
 level; in addition to the blue and green blocks previously mentioned. The scalable red blocks are the player's main
 means of interacting with the level, and a very direct usage of the theme 'SCALE'.
+
+Instructions:
+The matrix can be panned around by clicking and dragging the mouse.
+Red boxes can be grown by clicking on them.
+Only one Red box can be grown at a time.
+Blue boxes can be pushed by growing Red boxes or by other Blue boxes.
+White boxes can block the growth of Red boxes in one or two directions.
+To complete each matrix all Green boxes must be filled in with Blue boxes.
+Filled Green boxes will turn Purple.
+
+Author:
+Benjamin Wootten
+bwootten@udel.edu
+
+Acknowledgements:
+Designer documentation: https://designer-edu.github.io/designer/contents.html
 
 Phase 1 task list:
 - [x] The 3d level base can be panned around by the player
