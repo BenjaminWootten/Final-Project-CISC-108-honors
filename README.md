@@ -1,20 +1,15 @@
-Benjamin Wootten
-bwootten@udel.edu
+Growth Matrix
 
 Final Project for CISC 108
-
-Growth Matrix is a 3d puzzle game where the player can rotate the level
-by panning the mouse and can interact with different types of blocks in order to
-move one or more blue blocks to the green goal point.
-It has white, immovable blocks that serve as obstacles;
-red, scalable blocks that can be grown and shrunk by the player and used to push the
-blue blocks around the level; in addition to the blue and green blocks previously
-mentioned. I may add more types allowing more creative level designs,
-but these are my fundamentals.
-The scalable red blocks are the player's main means of interacting with the level,
-and a very direct usage of the theme 'SCALE'.
-
 To run this program you need to install the libraries NumPy and Designer
+
+Growth Matrix is a 3d puzzle game about using scalable boxes to push other boxes to the goal.
+
+In Growth Matrix the player can rotate the level  by panning the mouse and can interact with different types of blocks
+in order to move one or more blue blocks to the green goal point. It has white, immovable blocks that serve as
+obstacles; red, scalable blocks that can be grown and shrunk by the player and used to push the blue blocks around the
+level; in addition to the blue and green blocks previously mentioned. The scalable red blocks are the player's main
+means of interacting with the level, and a very direct usage of the theme 'SCALE'.
 
 Phase 1 task list:
 - [x] The 3d level base can be panned around by the player
