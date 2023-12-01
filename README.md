@@ -16,8 +16,6 @@ and a very direct usage of the theme 'SCALE'.
 
 To run this program you need to install the libraries NumPy and Designer
 
-![Sketch demonstrating the level with each type of block present](https://github.com/BenjaminWootten/Final-Project-CISC-108-honors/blob/main/Images/CISC108%20final%20project%20sketch.png)
-
 Phase 1 task list:
 - [x] The 3d level base can be panned around by the player
 - [x] Function to create a box on the level base and declare its type
@@ -51,3 +49,6 @@ Phase 3 task list:
 Extra task list:
 - [ ] New types of blocks
 - [ ] New levels utilizing these
+
+concept image
+![Sketch demonstrating the level with each type of block present](https://github.com/BenjaminWootten/Final-Project-CISC-108-honors/blob/main/Images/CISC108%20final%20project%20sketch.png)
