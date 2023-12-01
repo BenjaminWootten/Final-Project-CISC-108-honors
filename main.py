@@ -46,7 +46,18 @@ class MainMenu:
     title: DesignerObject
     title_background: DesignerObject
     title_border: DesignerObject
-    button: Button
+    play_button: Button
+    instructions_button: Button
+
+@dataclass
+class InstructionsMenu:
+    background: DesignerObject
+    border: DesignerObject
+    text: list[DesignerObject]
+    close_button: Button
+    title: DesignerObject
+    title_background: DesignerObject
+    title_border: DesignerObject
 
 @dataclass
 class LevelMenu:
@@ -669,15 +680,60 @@ def create_main_menu() -> MainMenu:
     title_background = rectangle("lightslategray", title.width + x_padding, title.height + y_padding, CENTER[0],
                                  CENTER[1]/3)
     title = text("black", "Growth Matrix", 50, CENTER[0], CENTER[1] / 3)
-    play_button = create_button("   Play   ", CENTER[0], CENTER[1]*1.25, "gray")
-    return MainMenu(title, title_background, title_border, play_button)
+    play_button = create_button("     Play     ", CENTER[0], CENTER[1] * 1.1, "gray")
+    instructions_button = create_button("Instructions", CENTER[0], CENTER[1] *1.1 + 40, "gray")
+
+    return MainMenu(title, title_background, title_border, play_button, instructions_button)
 
 def main_menu_button_hover(menu: MainMenu):
-    button_hover(menu.button)
+    button_hover(menu.play_button)
+    button_hover(menu.instructions_button)
 
 def main_menu_click(menu: MainMenu):
-    if button_hover(menu.button):
+    if button_hover(menu.play_button):
         change_scene('level_menu')
+    if button_hover(menu.instructions_button):
+        push_scene('instructions_menu')
+
+def create_instructions_menu() -> InstructionsMenu:
+    width = 600
+    height = 250
+    x_padding = 10
+    y_padding = 10
+    border = rectangle("white", width + 5, height + 5, CENTER[0], CENTER[1])
+    background = rectangle("dimgray", width, height, CENTER[0], CENTER[1])
+    instructions = [
+        text("black", "The matrix can be panned around by clicking and dragging the mouse.",
+             20, CENTER[0], CENTER[1]-height/2+25),
+        text("black", "Red boxes can be grown by clicking on them.",
+             20, CENTER[0], CENTER[1]-height/2+50),
+        text("black", "Only one Red box can be grown at a time.",
+             20, CENTER[0], CENTER[1]-height/2+75),
+        text("black", "Blue boxes can be pushed by growing Red boxes or by other Blue boxes.",
+             20, CENTER[0], CENTER[1]-height/2+100),
+        text("black", "White boxes can block the growth of Red boxes in one or two directions.",
+             20, CENTER[0], CENTER[1]-height/2+125),
+        text("black", "To complete each matrix all Green boxes must be filled in with Blue boxes.",
+             20, CENTER[0], CENTER[1]-height/2+150),
+        text("black", "Filled Green boxes will turn Purple.",
+             20, CENTER[0], CENTER[1]-height/2+175)
+    ]
+
+    close_button = create_button("Close", CENTER[0], CENTER[1]+height/2-25, "gray")
+    title = text("black", "Growth Matrix", 50, CENTER[0], CENTER[1] / 3)
+    title_border = rectangle("white", title.width + 2 * x_padding, title.height + 2 * y_padding, CENTER[0],
+                             CENTER[1] / 3)
+    title_background = rectangle("lightslategray", title.width + x_padding, title.height + y_padding, CENTER[0],
+                                 CENTER[1] / 3)
+    title = text("black", "Growth Matrix", 50, CENTER[0], CENTER[1] / 3)
+    return InstructionsMenu(background, border, instructions, close_button, title, title_border, title_background)
+
+def instructions_menu_hover(menu: InstructionsMenu):
+    button_hover(menu.close_button)
+
+def instructions_menu_click(menu: InstructionsMenu):
+    if button_hover(menu.close_button):
+        pop_scene()
 
 def create_level_menu() -> LevelMenu:
     x_padding = 10
@@ -731,6 +787,11 @@ def level_menu_click(menu: LevelMenu):
 when('starting: main_menu', create_main_menu)
 when('updating: main_menu', main_menu_button_hover)
 when('clicking: main_menu', main_menu_click)
+
+# Instructions menu events
+when('starting: instructions_menu', create_instructions_menu)
+when('updating: instructions_menu', instructions_menu_hover)
+when('clicking: instructions_menu', instructions_menu_click)
 
 # Level select menu events
 when('starting: level_menu', create_level_menu)
