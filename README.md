@@ -12,6 +12,8 @@ obstacles; red, scalable blocks that can be grown and shrunk by the player and u
 level; in addition to the blue and green blocks previously mentioned. The scalable red blocks are the player's main
 means of interacting with the level, and a very direct usage of the theme 'SCALE'.
 
+Preview: https://youtu.be/rJGWBwJ9VzI
+
 Instructions:
 The matrix can be panned around by clicking and dragging the mouse.
 Red boxes can be grown by clicking on them.
